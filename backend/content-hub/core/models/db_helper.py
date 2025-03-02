@@ -14,17 +14,17 @@ class DatabaseHelper:
 			self,
 			url: str,
 			echo: bool = False,
-			echo_pull: bool = False,
+			echo_pool: bool = False,
 			max_overflow: int = 10,
 			pool_size: int = 20,
 	) -> None:
 		"""
 		Initialize a new instance of DatabaseHelper with the provided database URL,
-		echo and echo_pull settings, and optional max_overflow and pool_size.
+		echo and echo_pool settings, and optional max_overflow and pool_size.
 
 		:param url: The URL of the database to connect to.
 		:param echo: Whether to echo the SQL queries to stdout.
-		:param echo_pull: Whether to echo the SQL queries pulled from the connection pool.
+		:param echo_pool: Whether to echo the SQL queries pulled from the connection pool.
 		:param max_overflow: The maximum number of connectors in the pool that can be in a
 			state of connection to the database.
 		:param pool_size: The number of connectors in the pool that can be used at the same
@@ -33,7 +33,7 @@ class DatabaseHelper:
 		self.engine: AsyncEngine = create_async_engine(
 			url=url,
 			echo=echo,
-			echo_pull=echo_pull,
+			echo_pool=echo_pool,
 			max_overflow=max_overflow,
 			pool_size=pool_size,
 		)
@@ -62,7 +62,7 @@ class DatabaseHelper:
 db_helper = DatabaseHelper(
 	url=str(settings.db.url),
 	echo=settings.db.echo,
-	echo_pull=settings.db.echo_pull,
+	echo_pool=settings.db.echo_pool,
 	max_overflow=settings.db.max_overflow,
 	pool_size=settings.db.pool_size,
 )
