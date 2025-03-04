@@ -1,20 +1,39 @@
-from typing import Literal
+from dotenv import load_dotenv
+import os
+from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import PostgresDsn
 from pydantic_settings import (
 	BaseSettings,
-	SettingsConfigDict,
 )
+
+# Load environment variables from .env file
+backend_path = Path(__file__).resolve().parent.parent.parent
+load_dotenv(backend_path / ".env")
+
+# Define a dictionary to store database configuration
+db_config = {
+	'user': os.getenv('POSTGRES_USER'),
+	'password': os.getenv('POSTGRES_PASSWORD'),
+	'host': os.getenv('POSTGRES_HOST'),
+	'port': os.getenv('POSTGRES_PORT'),
+	'db': os.getenv('POSTGRES_DB')
+}
 
 
 class RunConfig(BaseModel):
 	host: str = "0.0.0.0"
-	port: int = 8000
+	port: int = int(os.getenv("BACKEND_PORT"))
 
 
 class DatabaseConfig(BaseModel):
-	url: PostgresDsn
+	url: PostgresDsn = \
+		(
+			f"postgresql+asyncpg://{db_config['user']}:"
+			f"{db_config['password']}@{db_config['host']}:"
+			f"{db_config['port']}/{db_config['db']}"
+		)  # The connection URL for the PostgreSQL database
 	echo: bool = False
 	echo_pool: bool = False
 	max_overflow: int = 20
