@@ -1,9 +1,20 @@
 import uvicorn
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 
 from core.config import settings
+from core.models import db_helper
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(lifespan_app: FastAPI):
+	# Code to run before the application starts
+	yield
+	# Code to run after the application has finished
+	await db_helper.dispose()  # Closing all connections
+
+
+app = FastAPI(lifespan=lifespan)
 
 if __name__ == "__main__":
 	uvicorn.run(
