@@ -7,19 +7,11 @@ from pydantic import PostgresDsn
 from pydantic_settings import (
 	BaseSettings,
 )
+from utils import generate_postgres_db_url
 
 # Load environment variables from .env file
 backend_path = Path(__file__).resolve().parent.parent.parent
 load_dotenv(backend_path / ".env")
-
-# Define a dictionary to store database configuration
-db_config = {
-	'user': os.getenv('POSTGRES_USER'),
-	'password': os.getenv('POSTGRES_PASSWORD'),
-	'host': os.getenv('POSTGRES_HOST'),
-	'port': os.getenv('POSTGRES_PORT'),
-	'db': os.getenv('POSTGRES_DB')
-}
 
 
 class RunConfig(BaseModel):
@@ -28,12 +20,7 @@ class RunConfig(BaseModel):
 
 
 class DatabaseConfig(BaseModel):
-	url: PostgresDsn = \
-		(
-			f"postgresql+asyncpg://{db_config['user']}:"
-			f"{db_config['password']}@{db_config['host']}:"
-			f"{db_config['port']}/{db_config['db']}"
-		)  # The connection URL for the PostgreSQL database
+	url: PostgresDsn = generate_postgres_db_url()
 	echo: bool = False
 	echo_pool: bool = False
 	max_overflow: int = 20
