@@ -1,0 +1,10 @@
+:root {
+  /* fonts */
+  --base-font: "Roboto Mono", monospace;
+
+  /* colors */
+}
+
+.p-component {
+  font-family: var(--base-font);
+}

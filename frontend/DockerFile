@@ -1,0 +1,25 @@
+FROM node:22-alpine
+
+WORKDIR /frontend
+
+COPY package.json /frontend/
+COPY yarn.lock /frontend/
+
+RUN yarn
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["yarn", "dev"]
+
+# # Build Stage 2
+# FROM node:22-alpine
+# WORKDIR /app
+
+# # copy over build files from builder step
+# COPY --from=builder /app/.output  app/.output
+# COPY --from=builder /app/.nuxt  app/.nuxt
+
+# ENV HOST 0.0.0.0
+# EXPOSE 3000
