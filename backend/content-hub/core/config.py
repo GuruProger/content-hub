@@ -9,37 +9,42 @@ from pydantic_settings import (
 )
 from utils import generate_postgres_db_url
 
-# Load environment variables from .env file
+# Load environment variables from the .env file located in the backend directory
 backend_path = Path(__file__).resolve().parent.parent.parent
 load_dotenv(backend_path / ".env")
 
 
 class RunConfig(BaseModel):
-	host: str = "0.0.0.0"
-	port: int = int(os.getenv("BACKEND_PORT"))
+	"""Configuration for running the application"""
+	host: str = "0.0.0.0"  # Default host to bind the application
+	port: int = int(os.getenv("BACKEND_PORT"))  # Port to run the application, fetched from environment variables
 
 
 class DatabaseConfig(BaseModel):
-	url: PostgresDsn = generate_postgres_db_url()
-	echo: bool = False
-	echo_pool: bool = False
-	max_overflow: int = 20
-	pool_size: int = 10
+	"""Configuration for the database connection"""
+	url: PostgresDsn = generate_postgres_db_url()  # Generate the PostgreSQL database URL
+	echo: bool = False  # Whether to log SQL queries (useful for debugging)
+	echo_pool: bool = False  # Whether to log connection pool events
+	max_overflow: int = 20  # Maximum number of connections to allow in the pool beyond the pool_size
+	pool_size: int = 10  # Number of connections to keep in the pool
 
 
 class ApiV1Prefix(BaseModel):
-	prefix: str = "/v1"
+	"""Configuration for API version 1 prefix"""
+	prefix: str = "/v1"  # Prefix for API version 1 endpoints
 
 
 class ApiPrefix(BaseModel):
-	prefix: str = "/api"
-	v1: ApiV1Prefix = ApiV1Prefix()
+	"""Configuration for the base API prefix"""
+	prefix: str = "/api"  # Base prefix for all API endpoints
+	v1: ApiV1Prefix = ApiV1Prefix()  # Nested configuration for API version 1
 
 
 class Settings(BaseSettings):
-	run: RunConfig = RunConfig()
-	api: ApiPrefix = ApiPrefix()
-	db: DatabaseConfig = DatabaseConfig()
+	"""Main settings class"""
+	run: RunConfig = RunConfig()  # Application run configuration
+	api: ApiPrefix = ApiPrefix()  # API prefix configuration
+	db: DatabaseConfig = DatabaseConfig()  # Database configuration
 
 
 settings = Settings()
