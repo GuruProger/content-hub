@@ -27,7 +27,13 @@ class DatabaseConfig(BaseModel):
 	echo_pool: bool = False  # Whether to log connection pool events
 	max_overflow: int = 20  # Maximum number of connections to allow in the pool beyond the pool_size
 	pool_size: int = 10  # Number of connections to keep in the pool
-
+	naming_convention: dict[str, str] = {  # Naming conventions for database constraints and indexes
+		"ix": "ix_%(column_0_label)s",
+		"uq": "uq_%(table_name)s_%(column_0_N_name)s",
+		"ck": "ck_%(table_name)s_%(constraint_name)s",
+		"fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+		"pk": "pk_%(table_name)s",
+	}
 
 class ApiV1Prefix(BaseModel):
 	"""Configuration for API version 1 prefix"""
