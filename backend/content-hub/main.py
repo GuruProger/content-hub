@@ -21,6 +21,11 @@ app.include_router(
 	api_router,
 )
 
+
+@app.get("/")
+async def test():
+	return "hi"
+
 if __name__ == "__main__":
 	uvicorn.run(
 		"main:app",

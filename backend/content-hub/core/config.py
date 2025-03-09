@@ -45,12 +45,22 @@ class ApiPrefix(BaseModel):
 	prefix: str = "/api"  # Base prefix for all API endpoints
 	v1: ApiV1Prefix = ApiV1Prefix()  # Nested configuration for API version 1
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+class AuthJWT(BaseModel):
+    private_key_path: Path = BASE_DIR / "keys" / "jwt-private.pem"
+    public_key_path: Path = BASE_DIR / "keys" / "jwt-public.pem"
+    algorithm: str = "RS256"
+    access_token_expire_minutes: int = 10
+
 
 class Settings(BaseSettings):
 	"""Main settings class"""
 	run: RunConfig = RunConfig()  # Application run configuration
 	api: ApiPrefix = ApiPrefix()  # API prefix configuration
 	db: DatabaseConfig = DatabaseConfig()  # Database configuration
+	auth_jwt: AuthJWT = AuthJWT()
 
 
 settings = Settings()
