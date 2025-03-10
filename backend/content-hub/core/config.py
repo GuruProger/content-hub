@@ -1,23 +1,44 @@
-from dotenv import load_dotenv
-import os
-from pathlib import Path
-
-from pydantic import BaseModel
-from pydantic import PostgresDsn
+from pydantic import(
+	BaseModel,
+	PostgresDsn,
+	field_validator,
+	ValidationInfo,
+)
 from pydantic_settings import (
 	BaseSettings,
 )
-from utils import generate_postgres_db_url
-
-# Load environment variables from the .env file located in the backend directory
-backend_path = Path(__file__).resolve().parent.parent.parent
-load_dotenv(backend_path / ".env")
 
 
-class RunConfig(BaseModel):
+class AppSettings(BaseModel):
 	"""Configuration for running the application"""
-	host: str = "0.0.0.0"  # Default host to bind the application
-	port: int = int(os.getenv("BACKEND_PORT"))  # Port to run the application, fetched from environment variables
+	HOST: str = "0.0.0.0"
+	POST: int = 8000
+
+
+class PgSettings(BaseModel):
+	POSTGRES_DRV: str
+	POSTGRES_USER: str
+	POSTGRES_PASSWORD: str
+	POSTGRES_HOST: str
+	POSTGRES_PORT: int
+	POSTGRES_DB: str
+
+	POSTGRES_URL: PostgresDsn
+
+	@field_validator("POSTGRES_URL")
+	def pgurl_validate(
+		cls, v,
+		values: ValidationInfo,
+	) -> PostgresDsn:
+		data = values.data
+		return PostgresDsn.build(
+			scheme=data.get("POSTGRES_DRV"),
+			username=data.get("POSTGRES_USER"),
+			password=data.get("POSTGRES_PASSWORD"),
+			host=data.get("POSTGRES_HOST"),
+			port=data.get("POSTGRES_PORT"),
+			path=data.get("POSTGRES_DB")
+		)
 
 
 class DatabaseConfig(BaseModel):
@@ -35,22 +56,6 @@ class DatabaseConfig(BaseModel):
 		"pk": "pk_%(table_name)s",
 	}
 
-class ApiV1Prefix(BaseModel):
-	"""Configuration for API version 1 prefix"""
-	prefix: str = "/v1"  # Prefix for API version 1 endpoints
 
-
-class ApiPrefix(BaseModel):
-	"""Configuration for the base API prefix"""
-	prefix: str = "/api"  # Base prefix for all API endpoints
-	v1: ApiV1Prefix = ApiV1Prefix()  # Nested configuration for API version 1
-
-
-class Settings(BaseSettings):
-	"""Main settings class"""
-	run: RunConfig = RunConfig()  # Application run configuration
-	api: ApiPrefix = ApiPrefix()  # API prefix configuration
-	db: DatabaseConfig = DatabaseConfig()  # Database configuration
-
-
+app_settings = AppSettings()
 settings = Settings()
