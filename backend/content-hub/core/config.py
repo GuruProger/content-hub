@@ -1,5 +1,4 @@
 from pydantic import(
-	BaseModel,
 	PostgresDsn,
 	field_validator,
 	ValidationInfo,
@@ -9,13 +8,13 @@ from pydantic_settings import (
 )
 
 
-class AppSettings(BaseModel):
+class AppSettings(BaseSettings):
 	"""Configuration for running the application"""
-	HOST: str = "0.0.0.0"
-	POST: int = 8000
+	HOST: str
+	PORT: int
 
 
-class PgSettings(BaseModel):
+class PgSettings(BaseSettings):
 	POSTGRES_DRV: str
 	POSTGRES_USER: str
 	POSTGRES_PASSWORD: str
@@ -23,7 +22,7 @@ class PgSettings(BaseModel):
 	POSTGRES_PORT: int
 	POSTGRES_DB: str
 
-	POSTGRES_URL: PostgresDsn
+	POSTGRES_URL: PostgresDsn | None = None
 
 	@field_validator("POSTGRES_URL")
 	def pgurl_validate(
@@ -41,9 +40,9 @@ class PgSettings(BaseModel):
 		)
 
 
-class DatabaseConfig(BaseModel):
+class DatabaseConfig(BaseSettings):
 	"""Configuration for the database connection"""
-	url: PostgresDsn = generate_postgres_db_url()  # Generate the PostgreSQL database URL
+	url: PostgresDsn | None = None
 	echo: bool = False  # Whether to log SQL queries (useful for debugging)
 	echo_pool: bool = False  # Whether to log connection pool events
 	max_overflow: int = 20  # Maximum number of connections to allow in the pool beyond the pool_size
@@ -58,4 +57,7 @@ class DatabaseConfig(BaseModel):
 
 
 app_settings = AppSettings()
-settings = Settings()
+pg_settings = PgSettings()
+db_settings = DatabaseConfig(
+	url=pg_settings.POSTGRES_URL
+)
