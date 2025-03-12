@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import schemas
 from api.auth import utils as auth_utils
-from core.models.mixins.user import User
+from core.models.user import User
 
 
 async def get_user(

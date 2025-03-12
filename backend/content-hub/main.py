@@ -6,6 +6,7 @@ from core.models import db_helper
 from core.config import settings
 
 from api import router as api_router
+from api.auth import auth_router
 
 
 @asynccontextmanager
@@ -17,9 +18,9 @@ async def lifespan(lifespan_app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(
-	api_router,
-)
+app.include_router(api_router)
+app.include_router(auth_router)
+
 
 
 if __name__ == "__main__":

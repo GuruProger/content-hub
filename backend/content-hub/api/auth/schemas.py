@@ -1,6 +1,15 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 
 class UserCreateInput(BaseModel):
-    email: EmailStr
-    password: str
+    model_config = ConfigDict(strict=True)
+    username: str
+    password: bytes
+    email: EmailStr | None = None
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
