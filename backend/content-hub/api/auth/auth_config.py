@@ -20,21 +20,6 @@ oauth2_scheme = OAuth2PasswordBearer(
 
 router = APIRouter(prefix="/jwt", tags=["JWT"])
 
-john = UserCreateInput(
-    username="john",
-    password=auth_utils.hash_password("qwerty"),
-    email="john@example.com",
-)
-sam = UserCreateInput(
-    username="sam",
-    password=auth_utils.hash_password("secret"),
-)
-
-users_db: dict[str, UserCreateInput] = {
-    john.username: john,
-    sam.username: sam,
-}
-
 
 async def validate_auth_user(
     user_login: UserCreateInput,
