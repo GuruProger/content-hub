@@ -10,6 +10,7 @@ from api.auth.crud import get_user
 from core.models.user import User
 from api.auth.schemas import UserCreateInput, Token
 from core.models.db_helper import db_helper
+
 session_getter = db_helper.session_getter
 
 
@@ -90,9 +91,7 @@ async def get_current_auth_user(
             detail="token invalid (missing subject)",
         )
 
-    result = await session.execute(
-        select(User).where(User.username == username)
-    )
+    result = await session.execute(select(User).where(User.username == username))
     user = result.scalar_one_or_none()
 
     if not user:
@@ -100,7 +99,6 @@ async def get_current_auth_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="token invalid (user not found)",
         )
-
     return user
 
 
