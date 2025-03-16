@@ -10,6 +10,7 @@ from pydantic_settings import (
 from utils import generate_postgres_db_url
 
 # Load environment variables from the .env file located in the backend directory
+BASE_DIR = Path(__file__).resolve().parent.parent
 backend_path = Path(__file__).resolve().parent.parent.parent
 load_dotenv(backend_path / ".env")
 
@@ -60,12 +61,20 @@ class ApiPrefix(BaseModel):
     v1: ApiV1Prefix = ApiV1Prefix()  # Nested configuration for API version 1
 
 
-class Settings(BaseSettings):
-    """Main settings class"""
 
-    run: RunConfig = RunConfig()  # Application run configuration
-    api: ApiPrefix = ApiPrefix()  # API prefix configuration
-    db: DatabaseConfig = DatabaseConfig()  # Database configuration
+class AuthJWT(BaseModel):
+    private_key_path: Path = BASE_DIR / "keys" / "jwt-private.pem"
+    public_key_path: Path = BASE_DIR / "keys" / "jwt-public.pem"
+    algorithm: str = "RS256"
+    access_token_expire_minutes: int = 10
+
+
+class Settings(BaseSettings):
+	"""Main settings class"""
+	run: RunConfig = RunConfig()  # Application run configuration
+	api: ApiPrefix = ApiPrefix()  # API prefix configuration
+	db: DatabaseConfig = DatabaseConfig()  # Database configuration
+	auth_jwt: AuthJWT = AuthJWT()
 
 
 settings = Settings()
