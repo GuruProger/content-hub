@@ -62,7 +62,7 @@ class User(IDMixin, TimestampMixin, RatingMixin, Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
 
     role: Mapped[UserRole] = mapped_column(
-        SQLEnum(UserRole, name="user_role"), nullable=True, default=UserRole.USER
+        SQLEnum(UserRole, name="user_role"), nullable=False, default=UserRole.USER
     )
     avatar_url: Mapped[str] = mapped_column(String(255), nullable=True)
     bio: Mapped[str] = mapped_column(Text, nullable=True)
