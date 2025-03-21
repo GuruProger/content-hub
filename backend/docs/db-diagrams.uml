@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>DATABASE</ID>
+  <OriginalElement>fbab0778-c06d-4470-8c72-6b1b83fb9eb4</OriginalElement>
+  <nodes>
+    <node x="-87.5" y="250.5">fbab0778-c06d-4470-8c72-6b1b83fb9eb4.TABLE:content-hub.public.articles</node>
+    <node x="146.5" y="-31.0">fbab0778-c06d-4470-8c72-6b1b83fb9eb4.TABLE:content-hub.public.alembic_version</node>
+    <node x="-104.0" y="-143.5">fbab0778-c06d-4470-8c72-6b1b83fb9eb4.TABLE:content-hub.public.users</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="fbab0778-c06d-4470-8c72-6b1b83fb9eb4.TABLE:content-hub.public.articles" target="fbab0778-c06d-4470-8c72-6b1b83fb9eb4.TABLE:content-hub.public.users" relationship="REFERENCES">
+      <point x="0.0" y="-129.5" />
+      <point x="0.0" y="143.5" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Compact" zoom="1.3323442136498516" showDependencies="false" x="115.0" y="183.0" />
+  <SelectedNodes />
+  <Categories>
+    <Category>Columns</Category>
+    <Category>Comments</Category>
+    <Category>Key columns</Category>
+    <Category>Virtual foreign keys</Category>
+  </Categories>
+</Diagram>
+
