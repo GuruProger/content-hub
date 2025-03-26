@@ -24,6 +24,7 @@ class RunConfig(BaseModel):
 class DatabaseConfig(BaseModel):
 	"""Configuration for the database connection"""
 	url: PostgresDsn = generate_postgres_db_url()  # Generate the PostgreSQL database URL
+	test_url: PostgresDsn = generate_postgres_db_url(test=True)
 	echo: bool = False  # Whether to log SQL queries (useful for debugging)
 	echo_pool: bool = False  # Whether to log connection pool events
 	max_overflow: int = 20  # Maximum number of connections to allow in the pool beyond the pool_size

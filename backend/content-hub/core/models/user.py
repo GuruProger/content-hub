@@ -1,4 +1,6 @@
 from enum import Enum
+from importlib.metadata import pass_none
+
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -17,7 +19,7 @@ class UserRole(Enum):
 class User(IDMixin, TimestampMixin, RatingMixin, Base):
 	username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
 	email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-	password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+	password_hash: Mapped[bytes] = mapped_column(nullable=False)
 
 	role: Mapped[UserRole] = mapped_column(SQLEnum(UserRole, name="user_role"), nullable=False, default=UserRole.USER)
 	avatar_url: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -28,3 +30,13 @@ class User(IDMixin, TimestampMixin, RatingMixin, Base):
 			f"<User(id={self.id}, username='{self.username}', email='{self.email}', "
 			f"role='{self.role}', created_at='{self.created_at}', rating={self.rating})>"
 		)
+
+	def to_dict(self) -> dict:
+		return {
+			"username": self.username,
+			"email": self.email,
+			"password_hash": self.password_hash.decode("utf-8"),
+			"role": self.role.value,
+			"avatar_url": self.avatar_url,
+			"bio": self.bio
+		}

@@ -1,12 +1,11 @@
-from typing import Annotated
+
 from jwt.exceptions import InvalidTokenError
 from fastapi import Depends, HTTPException, status, APIRouter
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth import utils as auth_utils
-from api.auth.crud import get_user
+from api.auth import auth_utils as auth_utils
 from core.models.user import User
 from api.auth.schemas import UserCreateInput, Token
 from core.models.db_helper import db_helper
@@ -35,20 +34,13 @@ async def validate_auth_user(
     )
     user = result.scalar_one_or_none()
 
+
     if not user or not auth_utils.validate_password(
         password=user_login.password,
-        hashed_password=user.password,
+        hashed_password=user.password_hash,
     ):
         raise unauthed_exc
-
-    if not user.active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="user inactive",
-        )
-
     return user
-
 
 async def get_token_payload(
     token: str = Depends(oauth2_scheme),

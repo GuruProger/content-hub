@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import schemas
-from api.auth import utils as auth_utils
+from api.auth import auth_utils as auth_utils
 from core.models.user import User
 
 
