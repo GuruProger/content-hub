@@ -40,6 +40,7 @@ class DatabaseConfig(BaseModel):
 class ApiV1Prefix(BaseModel):
 	"""Configuration for API version 1 prefix"""
 	prefix: str = "/v1"  # Prefix for API version 1 endpoints
+	users: str = "/users"
 
 
 class ApiPrefix(BaseModel):

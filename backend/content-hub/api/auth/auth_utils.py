@@ -30,12 +30,11 @@ def encode_jwt(
         exp=expire,
         iat=now,
     )
-    encoded = jwt.encode(
+    return jwt.encode(
         to_encode,
         private_key,
-        algorithm=algorithm,
+        algorithm=algorithm
     )
-    return encoded
 
 
 def decode_jwt(
@@ -43,12 +42,11 @@ def decode_jwt(
     public_key: str = settings.auth_jwt.public_key_path.read_text(),
     algorithm: str = settings.auth_jwt.algorithm,
 ) -> dict:
-    decoded = jwt.decode(
+    return jwt.decode(
         token,
         public_key,
-        algorithms=[algorithm],
+        algorithms=[algorithm]
     )
-    return decoded
 
 
 def hash_password(
@@ -70,4 +68,4 @@ def validate_password(
 
 hashed = hash_password("my_secure_password")
 is_valid = validate_password("my_secure_password", hashed)
-print(is_valid)
+

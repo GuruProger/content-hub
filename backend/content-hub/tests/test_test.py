@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .conftest import get_async_session_native as session
+from .conftest import get_async_session as session
 
 @pytest.mark.asyncio
 async def test_eq(session: AsyncSession):

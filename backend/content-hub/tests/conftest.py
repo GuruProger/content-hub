@@ -26,17 +26,17 @@ async def prepare_database():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
-async def _create_async_session_native() -> AsyncGenerator[AsyncSession, None]:
+async def create_async_session() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
         yield session
 
 @pytest_asyncio.fixture(scope="function")
-async def get_async_session_native() -> AsyncGenerator[AsyncSession, None]:
-    async for session in _create_async_session_native():
+async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    async for session in create_async_session():
         yield session
 
 async def override_get_async_session():
-    async for session in _create_async_session_native():
+    async for session in create_async_session():
         yield session
 
 app.dependency_overrides[db_helper.session_getter] = override_get_async_session

@@ -3,6 +3,7 @@ from jwt.exceptions import InvalidTokenError
 from fastapi import Depends, HTTPException, status, APIRouter
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import auth_utils as auth_utils
@@ -24,22 +25,19 @@ async def validate_auth_user(
     user_login: UserCreateInput,
     session: AsyncSession = Depends(session_getter),
 ) -> User:
-    unauthed_exc = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="invalid username or password",
-    )
-
     result = await session.execute(
         select(User).where(User.username == user_login.username)
     )
     user = result.scalar_one_or_none()
 
-
     if not user or not auth_utils.validate_password(
         password=user_login.password,
         hashed_password=user.password_hash,
     ):
-        raise unauthed_exc
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password"
+        )
     return user
 
 async def get_token_payload(
@@ -112,3 +110,28 @@ async def auth_user_check_info(
         "email": user.email,
         "logged_in_at": iat,
     }
+
+
+@router.post("/register/", status_code=status.HTTP_201_CREATED)
+async def register_user(
+    user_data: UserCreateInput,
+    session: AsyncSession = Depends(session_getter),
+):
+    try:
+        hashed_password = auth_utils.hash_password(user_data.password)
+        new_user = User(
+            username=user_data.username,
+            email=user_data.email,
+            password_hash=hashed_password,
+        )
+        session.add(new_user)
+        await session.commit()
+        jwt_payload = {"sub": new_user.username, "username": new_user.username, "email": new_user.email}
+        token = auth_utils.encode_jwt(jwt_payload)
+        return Token(access_token=token, token_type="Bearer")
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username or email already exists.",
+        )

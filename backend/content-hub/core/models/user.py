@@ -1,5 +1,5 @@
 from enum import Enum
-from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import Enum as SQLEnum, LargeBinary
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from .base import Base
@@ -59,7 +59,7 @@ class User(IDMixin, TimestampMixin, RatingMixin, Base):
 
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-    password_hash: Mapped[bytes] = mapped_column(String(255), nullable=False)
+    password_hash: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
 
     role: Mapped[UserRole] = mapped_column(
         SQLEnum(UserRole, name="user_role"), nullable=True, default=UserRole.USER

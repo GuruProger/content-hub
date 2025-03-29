@@ -11,12 +11,12 @@ from main import app
 from core.models.db_helper import db_helper
 from api.auth.auth_utils import hash_password
 from core.models.user import User
-from .conftest import get_async_session_native as session
+from .conftest import get_async_session
 from .conftest import async_client
 session_getter = db_helper.session_getter
 
 @pytest_asyncio.fixture(scope="function")
-async def setup_test_user(get_async_session_native: AsyncSession) -> AsyncGenerator[User, Any]:
+async def setup_test_user(get_async_session: AsyncSession) -> AsyncGenerator[User, Any]:
     hashed_password = hash_password("test_password")
     test_user_dict = {
         "username": "test_user",
@@ -24,11 +24,11 @@ async def setup_test_user(get_async_session_native: AsyncSession) -> AsyncGenera
         "email": "test@gmail.com"
     }
     test_user = User(**test_user_dict)
-    async with get_async_session_native as session:
+    async with get_async_session as session:
         session.add(test_user)
         await session.commit()
     yield test_user
-    async with get_async_session_native as session:
+    async with get_async_session as session:
         await session.delete(test_user)
         await session.commit()
 

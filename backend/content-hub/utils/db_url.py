@@ -16,7 +16,7 @@ def generate_postgres_db_url(test: bool = False) -> str:
 			'user': os.getenv('TEST_POSTGRES_USER'),
 			'password': os.getenv('TEST_POSTGRES_PASSWORD'),
 			'host': os.getenv('TEST_POSTGRES_HOST'),
-			'port': os.getenv('POSTGRES_PORT'),
+			'port': os.getenv('TEST_POSTGRES_PORT'),
 			'db': os.getenv('TEST_POSTGRES_DB')
 		}
 
