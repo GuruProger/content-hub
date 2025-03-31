@@ -6,6 +6,8 @@ from sqlalchemy import NullPool
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from core.models.db_helper import db_helper
 from main import app
+import asyncio
+import pytest
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
@@ -17,6 +19,14 @@ engine = create_async_engine(
     poolclass=NullPool
 )
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def prepare_database():

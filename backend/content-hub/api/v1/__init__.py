@@ -16,3 +16,4 @@ router.include_router(
 router.include_router(
     articles_router,
     prefix=settings.api.v1.articles,
+)

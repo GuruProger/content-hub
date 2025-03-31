@@ -74,3 +74,39 @@ async def test_users_me(async_client, setup_test_user: User):
     assert "email" in response_data
     assert "logged_in_at" in response_data
 
+
+@pytest.mark.asyncio
+async def test_register_successful(async_client):
+    payload = {
+        "username": "test_register_success",
+        "email": "test_register_success@example.com",
+        "password": "my_secure_password"
+    }
+    response = await async_client.post("/jwt/register/", json=payload)
+    assert response.status_code == 201, f"First registration failed: {response.text}"
+    resp_data = response.json()
+    assert "access_token" in resp_data
+    assert resp_data["token_type"] == "Bearer"
+
+@pytest.mark.asyncio
+async def test_register_duplicate(async_client):
+    payload = {
+        "username": "test_register_duplicate",
+        "email": "test_register_duplicate@example.com",
+        "password": "my_secure_password"
+    }
+    response1 = await async_client.post("/jwt/register/", json=payload)
+    assert response1.status_code == 201, f"First registration failed: {response1.text}"
+    response2 = await async_client.post("/jwt/register/", json=payload)
+    assert response2.status_code == 400, f"Duplicate registration did not produce expected error: {response2.text}"
+    resp_data = response2.json()
+    assert resp_data["detail"] == "Username or email already exists."
+
+@pytest.mark.asyncio
+async def test_register_missing_field(async_client):
+    payload = {
+        "username": "test_register_missing",
+        "password": "my_secure_password"
+    }
+    response = await async_client.post("/jwt/register/", json=payload)
+    assert response.status_code == 422, f"Validation error was not triggered: {response.text}"
