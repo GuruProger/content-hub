@@ -1,59 +1,57 @@
+import base64
 from typing import Type
 
-from fastapi import HTTPException, status
-
+from fastapi import HTTPException, status, UploadFile
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.auth.auth_utils import hash_password
 from core.models import User
-from core.schemas.user import UserCreate, UserUpdate
+from core.schemas.user import UserCreateSchema, UserUpdateSchema
 
 
 async def create_user(
     session: AsyncSession,
-    user_create: UserCreate,
+    user_create: UserCreateSchema,
+    avatar: UploadFile | None = None,
 ) -> User:
     """
     Create a new user in the database.
 
-    :param session: AsyncSession for database interaction
-    :type session: AsyncSession
-    :param user_create: User creation data
-    :type user_create: UserCreate
+    Args:
+            session (AsyncSession): AsyncSession for database interaction.
+            user_create (UserCreateSchema): User creation data.
+            avatar (UploadFile | None): Avatar file (optional).
 
-    :return: The created user
-    :rtype: User
+    Returns:
+            User: The created user.
 
-    :raises HTTPException: If a database error occurs
+    Raises:
+            HTTPException: If a database error occurs.
     """
     try:
-        # Convert the UserCreate Pydantic model to a dictionary
+        # Extract user data and hash password
         user_data = user_create.model_dump()
+        user_data["password"] = hash_password(user_data["password"])
 
-        # Extract the password from the user data
-        password = user_data.pop("password")
+        # If an avatar is provided, read its contents
+        if avatar:
+            contents = await avatar.read()
+            user_data["avatar"] = contents
 
-        hashed_password = password  # Replace with real hashing
-
-        # Add the hashed password to the user data with the correct field name
-        user_data["password_hash"] = hashed_password
-
-        # Create a User instance using the modified user data
+        # Create a new user object and add it to the session
         user = User(**user_data)
-
-        # Add the user to the session and commit the transaction
         session.add(user)
         await session.commit()
         await session.refresh(user)
 
-        # Return the created user
+        # Return the user with avatar presence as a boolean
+        user.avatar = bool(user.avatar)
         return user
-
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         await session.rollback()
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error"
         )
 
 
@@ -64,26 +62,29 @@ async def get_user(
     """
     Retrieve a user by their ID.
 
-    :param session: AsyncSession for database interaction
-    :type session: AsyncSession
-    :param user_id: The ID of the user to retrieve
-    :type user_id: int
+    Args:
+            session (AsyncSession): AsyncSession for database interaction.
+            user_id (int): The ID of the user to retrieve.
 
-    :return: The retrieved user
-    :rtype: User
+    Returns:
+            User: The retrieved user.
 
-    :raises HTTPException: If the user is not found or a database error occurs
+    Raises:
+            HTTPException: If the user is not found or a database error occurs.
     """
     try:
-        # Attempt to retrieve the user by ID
+        # Fetch user from database
         user = await session.get(User, user_id)
+
         if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+            raise HTTPException(status_code=404, detail="User or avatar not found")
+
+        # Encode avatar if available
+        if user.avatar:
+            user.avatar = base64.b64encode(user.avatar).decode("utf-8")
+
         return user
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database error",
@@ -93,48 +94,59 @@ async def get_user(
 async def update_user(
     session: AsyncSession,
     user_id: int,
-    user_update: UserUpdate,
+    user_update: UserUpdateSchema,
+    avatar: UploadFile | None = None,
 ) -> Type[User]:
     """
     Update an existing user's data.
 
-    :param session: AsyncSession for database interaction
-    :type session: AsyncSession
-    :param user_id: The ID of the user to update
-    :type user_id: int
-    :param user_update: The data to update the user with
-    :type user_update: UserUpdate
+    Args:
+            session (AsyncSession): AsyncSession for database interaction.
+            user_id (int): The ID of the user to update.
+            user_update (UserUpdateSchema): The data to update the user with.
+            avatar (UploadFile | None): Avatar file to update (optional).
 
-    :return: The updated user
-    :rtype: User
+    Returns:
+            User: The updated user.
 
-    :raises HTTPException: If the user is not found or a database error occurs
+    Raises:
+            HTTPException: If the user is not found or a database error occurs.
     """
     try:
-        # Get existing user data
+        # Fetch user to update
         user = await session.get(User, user_id)
         if user is None:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
-        # Convert update data to dict and handle password
+        # Extract update data, excluding unset values
         update_data = user_update.model_dump(exclude_unset=True)
 
-        if "password" in update_data:
-            password = update_data.pop("password")
-            user.password_hash = password  # Replace with real hashing
+        # Hash password if provided in update
+        if "password" in update_data and update_data["password"]:
+            update_data["password"] = hash_password(update_data["password"])
 
-        # Update fields
+        # If an avatar is provided, read its contents
+        if avatar:
+            try:
+                contents = await avatar.read()
+                update_data["avatar"] = contents
+            finally:
+                await avatar.close()
+
+        # Apply updates to the user object
         for field, value in update_data.items():
-            setattr(user, field, value)
+            if value is not None:
+                setattr(user, field, value)
 
         await session.commit()
         await session.refresh(user)
-        return user
 
-    except SQLAlchemyError as e:
+        # Return the updated user with avatar presence as a boolean
+        user.avatar = bool(user.avatar)
+        return user
+    except SQLAlchemyError:
         await session.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -149,14 +161,15 @@ async def delete_user(
     """
     Delete a user by their ID.
 
-    :param session: AsyncSession for database interaction
-    :type session: AsyncSession
-    :param user_id: The ID of the user to delete
-    :type user_id: int
+    Args:
+            session (AsyncSession): AsyncSession for database interaction.
+            user_id (int): The ID of the user to delete.
 
-    :return: None
+    Returns:
+            None: No return value.
 
-    :raises HTTPException: If the user is not found or a database error occurs
+    Raises:
+            HTTPException: If the user is not found or a database error occurs.
     """
     try:
         # Retrieve the user to be deleted
@@ -171,8 +184,7 @@ async def delete_user(
         await session.delete(user)
         await session.commit()
         return None
-
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         await session.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

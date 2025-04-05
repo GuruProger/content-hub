@@ -1,53 +1,53 @@
-from sqlalchemy import Boolean, ForeignKey, String, Text
+from sqlalchemy import Boolean, ForeignKey, String, Text, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 from .mixins.id_mixin import IDMixin
 from .mixins.timestamp_mixin import TimestampMixin
-from .mixins.rating_mixin import RatingMixin
 
 
-class Article(IDMixin, TimestampMixin, RatingMixin, Base):
-    """SQLAlchemy model representing an article.
+class Article(IDMixin, TimestampMixin, Base):
+    """
+    SQLAlchemy model representing an article.
 
     Combines common mixins with article-specific attributes like title, content,
     publication status, and relationship to the author.
 
-    :param id: Auto-generated unique identifier
-    :type id: int
-    :param created_at: Timestamp of article creation (auto-generated)
-    :type created_at: datetime
-    :param updated_at: Timestamp of last update (auto-generated)
-    :type updated_at: datetime
-    :param rating: Article rating (likes count)
-    :type rating: int
-    :param title: Article title (up to 255 characters)
-    :type title: str
-    :param content: Full text of the article
-    :type content: str
-    :param user_id: Foreign key to users.id (author)
-    :type user_id: int
-    :param is_published: Publication status flag
-    :type is_published: bool
+    Attributes:
+        id (int): Auto-generated unique identifier.
+        created_at (datetime): Timestamp of article creation (auto-generated).
+        updated_at (datetime): Timestamp of last update (auto-generated).
+        rating (float): Article rating starting at 0.
+        title (str): Article title (up to 255 characters).
+        content (str): Full text of the article.
+        user_id (int): Foreign key to user.id (author).
+        is_published (bool): Publication status flag.
 
-    .. note::
-       Inherits from:
-       - ``IDMixin`` for primary key
-       - ``TimestampMixin`` for creation and update timestamps
-       - ``RatingMixin`` for rating system
+    Raises:
+        ValueError: If any constraint violations occur.
+        sqlalchemy.exc.IntegrityError: On foreign key constraint failures.
 
-    Example usage::
+    Notes:
+        Inherits from:
+        - IDMixin for primary key.
+        - TimestampMixin for creation and update timestamps.
 
+    Examples:
+        Creating a new article instance:
+
+        ```python
         new_article = Article(
             title="My First Article",
             content="This is the article content.",
             user_id=1,
             is_published=True
         )
+        ```
     """
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    rating: Mapped[float] = mapped_column(Float(precision=2), default=0.0)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False)
     is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     author: Mapped["User"] = relationship("User", backref="articles")
