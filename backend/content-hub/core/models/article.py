@@ -4,6 +4,7 @@ from .base import Base
 from .mixins.id_mixin import IDMixin
 from .mixins.timestamp_mixin import TimestampMixin
 from .mixins.rating_mixin import RatingMixin
+from typing import List
 
 
 class Article(IDMixin, TimestampMixin, RatingMixin, Base):
@@ -51,6 +52,7 @@ class Article(IDMixin, TimestampMixin, RatingMixin, Base):
     is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     author: Mapped["User"] = relationship("User", backref="articles")
+    likes: Mapped[List["Like"]] = relationship("Like", back_populates="article", cascade="all, delete-orphan")
 
     include_updated_at = True  # For TimestampMixin
 
