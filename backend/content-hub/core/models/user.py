@@ -1,7 +1,9 @@
 from enum import Enum
+from typing import List
+
 from sqlalchemy import Enum as SQLEnum, LargeBinary
 from sqlalchemy import String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 
 from .mixins.id_mixin import IDMixin
@@ -66,6 +68,8 @@ class User(IDMixin, TimestampMixin, RatingMixin, Base):
     )
     avatar_url: Mapped[str] = mapped_column(String(255), nullable=True)
     bio: Mapped[str] = mapped_column(Text, nullable=True)
+
+    likes: Mapped[List["Like"]] = relationship("Like", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return (
