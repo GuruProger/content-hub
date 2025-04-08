@@ -1,74 +1,74 @@
-## **User API**
+## **Users API**
 
 **Base URL:** `http://127.0.0.1:8000/api/v1/users`
-
+  
 ---
 
 ### **Create User**
 
 **POST** `/`
 
-Creates a new user.
+Creates a new user with optional avatar upload.
 
-#### Request Body Parameters:
+#### Request Content Type:
 
-| Parameter    | Type     | Required | Description                       |
-|--------------|----------|----------|-----------------------------------|
-| `username`   | `string` | yes      | User's login (max. 25 characters) |
-| `email`      | `string` | yes      | User's email                      |
-| `bio`        | `string` | no       | Bio (max. 1000 characters)        |
-| `avatar_url` | `string` | no       | Avatar URL                        |
-| `password`   | `string` | yes      | Password (8-30 characters)        |
+`multipart/form-data`
+
+#### Form Data Parameters:
+
+| Parameter  | Type   | Required | Description                         |
+|------------|--------|----------|-------------------------------------|
+| `username` | string | yes      | Unique username (max 50 characters) |
+| `email`    | email  | yes      | Valid email address                 |
+| `bio`      | string | no       | Optional user bio (max 1000 chars)  |
+| `password` | string | yes      | User password (min 8, max 30 chars) |
+| `avatar`   | file   | no       | Optional avatar image (binary file) |
 
 #### Example Request:
 
-```http
-POST /api/v1/users
-Content-Type: application/json
-
-{
-  "username": "john_doe",
-  "email": "john@example.com",
-  "password": "securepassword",
-  "bio": "Hello! I'm John.",
-  "avatar_url": null
-}
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/users \
+  -F "username=johndoe" \
+  -F "email=john@example.com" \
+  -F "password=securepassword123" \
+  -F "bio=Just a regular guy" \
+  -F "avatar=@/path/to/avatar.jpg"
 ```
 
 #### Responses:
 
-- **201 Created** — user successfully created.
-- **400 Bad Request** — invalid request data.
-- **500 Internal Server Error** — server error.
+- **201 Created** — User successfully created.
+- **400 Bad Request** — Invalid or missing data.
+- **500 Internal Server Error** — Database error.
 
-#### Example Successful Response (201):
+#### Example Response:
 
 ```json
 {
   "id": 1,
-  "username": "john_doe",
+  "username": "johndoe",
   "email": "john@example.com",
-  "bio": "Hello! I'm John.",
-  "avatar_url": null,
-  "created_at": "2025-03-21T12:30:00.000001",
-  "rating": 0,
-  "role": "user"
+  "bio": "Just a regular guy",
+  "avatar": true,
+  "created_at": "2025-04-08T12:00:00"
 }
 ```
 
+> Note: The `avatar` field indicates whether the user has an avatar (`true` or `false`).
+
 ---
 
-### **Get User**
+### **Get User by ID**
 
 **GET** `/{user_id}`
 
-Retrieve user information by ID.
+Retrieves a user by their ID, including avatar as a base64-encoded string if present.
 
 #### URL Parameters:
 
-| Parameter | Type  | Required | Description |
-|-----------|-------|----------|-------------|
-| `user_id` | `int` | yes      | User ID     |
+| Parameter | Type | Required | Description    |
+|-----------|------|----------|----------------|
+| `user_id` | int  | yes      | ID of the user |
 
 #### Example Request:
 
@@ -78,100 +78,81 @@ GET /api/v1/users/1
 
 #### Responses:
 
-- **200 OK** — user found and data returned.
-- **404 Not Found** — user not found.
-- **500 Internal Server Error** — server error.
+- **200 OK** — User data returned.
+- **404 Not Found** — User not found.
+- **500 Internal Server Error** — Database error.
 
-#### Example Successful Response (200):
+#### Example Response:
 
 ```json
 {
   "id": 1,
-  "username": "john_doe",
+  "username": "johndoe",
   "email": "john@example.com",
-  "bio": "Hello! I'm John.",
-  "avatar_url": null,
-  "created_at": "2025-03-21T12:30:00.000001",
-  "rating": 0,
-  "role": "user"
+  "bio": "Just a regular guy",
+  "avatar": "base64_encoded_string",
+  "created_at": "2025-04-08T12:00:00"
 }
 ```
 
-#### Example Error (404):
-
-```json
-{
-  "detail": "User not found"
-}
-```
+> Note: The `avatar` field is a base64-encoded string in this endpoint if the user has an avatar.
 
 ---
 
 ### **Update User**
 
-**PUT** `/{user_id}`
+**PATCH** `/{user_id}`
 
-Update user information.
+Updates user data, including optional avatar image.
+
+#### Request Content Type:
+
+`multipart/form-data`
 
 #### URL Parameters:
 
-| Parameter | Type  | Required | Description |
-|-----------|-------|----------|-------------|
-| `user_id` | `int` | yes      | User ID     |
+| Parameter | Type | Required | Description    |
+|-----------|------|----------|----------------|
+| `user_id` | int  | yes      | ID of the user |
 
-#### Request Body Parameters:
+#### Form Data Parameters (all optional):
 
-All fields are optional.
-
-| Parameter    | Type     | Required | Description                       |
-|--------------|----------|----------|-----------------------------------|
-| `username`   | `string` | no       | New username (max. 25 characters) |
-| `email`      | `string` | no       | New email                         |
-| `bio`        | `string` | no       | New bio                           |
-| `avatar_url` | `string` | no       | New avatar URL                    |
-| `password`   | `string` | no       | New password (8-30 characters)    |
+| Parameter  | Type   | Description                        |
+|------------|--------|------------------------------------|
+| `username` | string | New username (max 50 characters)   |
+| `email`    | email  | New email address                  |
+| `bio`      | string | New bio (max 1000 chars)           |
+| `password` | string | New password (min 8, max 30 chars) |
+| `avatar`   | file   | New avatar image                   |
 
 #### Example Request:
 
-```http
-PUT /api/v1/users/1
-Content-Type: application/json
-
-{
-  "username": "john_updated",
-  "bio": "Updated bio"
-}
+```bash
+curl -X PATCH http://127.0.0.1:8000/api/v1/users/1 \
+  -F "username=johndoe_updated" \
+  -F "avatar=@/path/to/new_avatar.jpg"
 ```
 
 #### Responses:
 
-- **200 OK** — user successfully updated.
-- **404 Not Found** — user not found.
-- **400 Bad Request** — invalid request data.
-- **500 Internal Server Error** — server error.
+- **200 OK** — User successfully updated.
+- **404 Not Found** — User not found.
+- **500 Internal Server Error** — Database error.
 
-#### Example Successful Response (200):
+#### Example Response:
 
 ```json
 {
   "id": 1,
-  "username": "john_updated",
+  "username": "johndoe_updated",
   "email": "john@example.com",
-  "bio": "Updated bio",
-  "avatar_url": null,
-  "created_at": "2025-03-21T12:30:00.000001",
-  "rating": 0,
-  "role": "user"
+  "bio": "Just a regular guy",
+  "avatar": true,
+  "created_at": "2025-04-08T12:00:00"
 }
 ```
 
-#### Example Error (404):
-
-```json
-{
-  "detail": "User not found"
-}
-```
+> Note: The `avatar` field indicates presence (`true` or `false`), not base64 data.
 
 ---
 
@@ -179,13 +160,13 @@ Content-Type: application/json
 
 **DELETE** `/{user_id}`
 
-Delete a user by ID.
+Deletes a user by their ID.
 
 #### URL Parameters:
 
-| Parameter | Type  | Required | Description |
-|-----------|-------|----------|-------------|
-| `user_id` | `int` | yes      | User ID     |
+| Parameter | Type | Required | Description    |
+|-----------|------|----------|----------------|
+| `user_id` | int  | yes      | ID of the user |
 
 #### Example Request:
 
@@ -195,17 +176,19 @@ DELETE /api/v1/users/1
 
 #### Responses:
 
-- **204 No Content** — user successfully deleted.
-- **404 Not Found** — user not found.
-- **500 Internal Server Error** — server error.
+- **204 No Content** — User deleted successfully.
+- **404 Not Found** — User not found.
+- **500 Internal Server Error** — Database error.
 
-#### Example Error (404):
+#### Example Error Response:
 
 ```json
 {
   "detail": "User not found"
 }
 ```
+
+---
 
 ## **Articles API**
 
