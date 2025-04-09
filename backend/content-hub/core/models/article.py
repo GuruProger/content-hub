@@ -6,6 +6,11 @@ from .mixins.timestamp_mixin import TimestampMixin
 from .mixins.rating_mixin import RatingMixin
 from typing import List
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .like import Like
+    from .user import User
+
 
 class Article(IDMixin, TimestampMixin, RatingMixin, Base):
     """SQLAlchemy model representing an article.

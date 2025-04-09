@@ -1,5 +1,6 @@
 from datetime import datetime
 from sqlalchemy import ForeignKey, DateTime, func
+from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 
@@ -21,8 +22,9 @@ class Like(Base):
         ForeignKey("users.id"),
         primary_key=True
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
-
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
+    )
     article: Mapped["Article"] = relationship("Article", back_populates="likes")
     user: Mapped["User"] = relationship("User", back_populates="likes")
 
