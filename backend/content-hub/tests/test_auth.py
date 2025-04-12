@@ -2,12 +2,9 @@ from typing import Any, AsyncGenerator
 
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth.schemas import Token
-from core.models import User
-from main import app
 from core.models.db_helper import db_helper
 from api.auth.auth_utils import hash_password
 from core.models.user import User
