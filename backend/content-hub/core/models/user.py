@@ -1,11 +1,19 @@
+from enum import Enum
+
 from sqlalchemy import String, Text, Integer
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Boolean, LargeBinary
+from sqlalchemy import Enum as SQLEnum, Boolean, LargeBinary
 
 from .base import Base
 
 from .mixins.id_mixin import IDMixin
 from .mixins.timestamp_mixin import TimestampMixin
+
+
+class AccountStatus(Enum):
+    ACTIVE = "active"
+    DELETED = "deleted"
+    BANNED = "banned"
 
 
 class User(IDMixin, TimestampMixin, Base):
@@ -24,6 +32,8 @@ class User(IDMixin, TimestampMixin, Base):
         is_admin (bool): Administrator privileges flag (default False).
         avatar (bytes | None): Optional profile image as binary data.
         bio (str | None): Optional user description.
+        status (AccountStatus): Current account state (active/deleted/banned).
+
 
     Raises:
         ValueError: If username/email constraints are violated.
@@ -52,8 +62,15 @@ class User(IDMixin, TimestampMixin, Base):
     avatar: Mapped[bytes] = mapped_column(LargeBinary, nullable=True)
     bio: Mapped[str] = mapped_column(Text, nullable=True)
 
+    status: Mapped[AccountStatus] = mapped_column(
+        SQLEnum(AccountStatus, name="account_status"),
+        default=AccountStatus.ACTIVE,
+        nullable=False,
+    )
+
     def __repr__(self) -> str:
         return (
-            f"<User(id={self.id}, username='{self.username}', email='{self.email}', "
-            f"is_admin='{self.is_admin}', created_at='{self.created_at}', rating={self.rating})>"
+            f"<User(id={self.id}, username='{self.username}',"
+            f" email='{self.email}', created_at='{self.created_at}',"
+            f"is_admin='{self.is_admin}', rating={self.rating}, status='{self.status}')>"
         )
