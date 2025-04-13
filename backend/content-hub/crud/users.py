@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth.auth_utils import hash_password
 from core.models import User
+from core.models.user import AccountStatus
 from core.schemas.user import UserCreateSchema, UserUpdateSchema
 
 
@@ -159,11 +160,11 @@ async def delete_user(
     user_id: int,
 ) -> None:
     """
-    Delete a user by their ID.
+    Soft delete a user by changing their status to DELETED.
 
     Args:
             session (AsyncSession): AsyncSession for database interaction.
-            user_id (int): The ID of the user to delete.
+            user_id (int): The ID of the user to mark as deleted.
 
     Returns:
             None: No return value.
@@ -172,7 +173,7 @@ async def delete_user(
             HTTPException: If the user is not found or a database error occurs.
     """
     try:
-        # Retrieve the user to be deleted
+        # Retrieve the user to be marked as deleted
         user = await session.get(User, user_id)
         if user is None:
             raise HTTPException(
@@ -180,8 +181,10 @@ async def delete_user(
                 detail="User not found",
             )
 
-        # Delete the user and commit the transaction
-        await session.delete(user)
+        # Update the user status to DELETED and commit the transaction
+        user.status = (
+            AccountStatus.DELETED
+        )  # or just AccountStatus.DELETED depending on your model
         await session.commit()
         return None
     except SQLAlchemyError:
