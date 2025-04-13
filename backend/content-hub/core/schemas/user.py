@@ -1,7 +1,8 @@
 from datetime import datetime
 
-from fastapi import UploadFile
 from pydantic import BaseModel, Field, EmailStr
+
+from core.models.user import AccountStatus
 
 
 class UserBaseSchema(BaseModel):
@@ -37,6 +38,7 @@ class UserReadSchema(UserBaseSchema):
     rating: int
     is_admin: bool
     avatar: bytes | bool | None
+    status: AccountStatus
 
     class Config:
         from_attributes = True

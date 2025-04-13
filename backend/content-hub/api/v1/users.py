@@ -1,6 +1,6 @@
 from typing import Annotated, Type
 
-from fastapi import APIRouter, Depends, status, UploadFile, Form
+from fastapi import APIRouter, Depends, status, UploadFile, Form, HTTPException
 from pydantic import EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import Response
@@ -15,12 +15,13 @@ router = APIRouter(tags=["Users"])
 @router.post("/", response_model=UserReadSchema, status_code=status.HTTP_201_CREATED)
 async def create_user_endpoint(
     session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
-    username: str = Form(...),
+    username: str = Form(..., max_length=50),
     email: EmailStr = Form(...),
-    bio: str | None = Form(None),
-    password: str = Form(...),
+    bio: str | None = Form(None, max_length=1000),
+    password: str = Form(..., min_length=8, max_length=30),
     avatar: UploadFile | None = None,
-) -> User:
+) -> User | str:
+
     return await users_crud.create_user(
         session=session,
         user_create=UserCreateSchema(

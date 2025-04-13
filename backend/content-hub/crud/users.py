@@ -2,7 +2,7 @@ import base64
 from typing import Type
 
 from fastapi import HTTPException, status, UploadFile
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth.auth_utils import hash_password
@@ -49,6 +49,29 @@ async def create_user(
         # Return the user with avatar presence as a boolean
         user.avatar = bool(user.avatar)
         return user
+    except IntegrityError as e:
+        await session.rollback()
+        if "username" in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "loc": "username",
+                    "msg": "Username already exists",
+                },
+            )
+        elif "email" in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "loc": "email",
+                    "msg": "Email already exists",
+                },
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Unique constraint violation",
+            )
     except SQLAlchemyError:
         await session.rollback()
         raise HTTPException(
@@ -147,6 +170,28 @@ async def update_user(
         # Return the updated user with avatar presence as a boolean
         user.avatar = bool(user.avatar)
         return user
+    except IntegrityError as e:
+        if "username" in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "loc": "username",
+                    "msg": "Username already exists",
+                },
+            )
+        elif "email" in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "loc": "email",
+                    "msg": "Email already exists",
+                },
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Unique constraint violation",
+            )
     except SQLAlchemyError:
         await session.rollback()
         raise HTTPException(
