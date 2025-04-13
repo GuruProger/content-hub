@@ -2,7 +2,6 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from core.models.db_helper import db_helper
 from core.schemas.user import UserReadSchema
 from .conftest import async_client
 
@@ -30,6 +29,20 @@ def avatar_file():
 
 # Test class for User API endpoints
 class TestUserAPI:
+
+    @staticmethod
+    async def _create_user(async_client, user_data):
+        """Get id of the newly created user (for further tests)"""
+        response = await async_client.post(
+            BASE_URL,
+            data={
+                "username": user_data["username"],
+                "email": user_data["email"],
+                "password": user_data["password"],
+            },
+        )
+        return response.json()["id"]
+
     @pytest.mark.asyncio
     async def test_create_user_with_avatar(self, async_client, user_data, avatar_file):
         """
@@ -65,6 +78,37 @@ class TestUserAPI:
         return response_data["id"]  # Return the created user ID for use in other tests
 
     @pytest.mark.asyncio
+    async def test_create_duplicate_user(self, async_client, user_data):
+        """
+        Attempt to create two users with the same username and email.
+        The first user should be created successfully, and the second should trigger a validation error.
+        """
+
+        # First, create the initial user
+        response = await async_client.post(
+            BASE_URL,
+            files=[
+                ("username", (None, user_data["username"])),
+                ("email", (None, user_data["email"])),
+                ("password", (None, user_data["password"])),
+            ],
+        )
+        assert response.status_code == 201
+
+        # Then, try to create a second user with the same data
+        duplicate_response = await async_client.post(
+            BASE_URL,
+            files=[
+                ("username", (None, user_data["username"])),
+                ("email", (None, user_data["email"])),
+                ("password", (None, user_data["password"])),
+            ],
+        )
+
+        assert duplicate_response.status_code == 409
+        assert "detail" in duplicate_response.json()
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("missing_field", ["username", "email", "password"])
     async def test_create_user_missing_required_field(
         self, async_client, user_data, missing_field
@@ -95,9 +139,7 @@ class TestUserAPI:
         """
 
         # First create a user to test with
-        user_id = await self.test_create_user_with_avatar(
-            async_client, user_data, avatar_file
-        )
+        user_id = await self._create_user(async_client, user_data)
 
         # Send GET request for the created user
         response = await async_client.get(f"{BASE_URL}{user_id}")
@@ -128,9 +170,7 @@ class TestUserAPI:
         Test updating user's text fields (username, email, bio, password).
         """
         # First, create a user
-        user_id = await self.test_create_user_with_avatar(
-            async_client, user_data, avatar_file
-        )
+        user_id = await self._create_user(async_client, user_data)
 
         new_data = {
             "username": "updated_username",
@@ -155,9 +195,7 @@ class TestUserAPI:
         """
         Test updating only the user's avatar.
         """
-        user_id = await self.test_create_user_with_avatar(
-            async_client, user_data, avatar_file
-        )
+        user_id = await self._create_user(async_client, user_data)
 
         with open(avatar_file, "rb") as new_avatar:
             response = await async_client.patch(
@@ -176,9 +214,7 @@ class TestUserAPI:
         """
         Test updating both text fields and avatar at the same time.
         """
-        user_id = await self.test_create_user_with_avatar(
-            async_client, user_data, avatar_file
-        )
+        user_id = await self._create_user(async_client, user_data)
 
         with open(avatar_file, "rb") as avatar:
             response = await async_client.patch(
@@ -218,9 +254,7 @@ class TestUserAPI:
         """
         Test updating with an invalid password (too short).
         """
-        user_id = await self.test_create_user_with_avatar(
-            async_client, user_data, avatar_file
-        )
+        user_id = await self._create_user(async_client, user_data)
 
         # Invalid password (less than 8 characters)
         response = await async_client.patch(
@@ -228,10 +262,9 @@ class TestUserAPI:
             data={"password": "short"},
         )
 
-        assert response.status_code == 422  # Validation error
+        assert response.status_code == 422
         assert "detail" in response.json()
 
-        # Неверный пароль (меньше 8 символов)
         response = await async_client.patch(
             f"{BASE_URL}{user_id}",
             data={"password": "short"},
@@ -239,3 +272,23 @@ class TestUserAPI:
 
         assert response.status_code == 422
         assert "detail" in response.json()
+
+    @pytest.mark.asyncio
+    async def test_delete_user(self, async_client, user_data, avatar_file):
+        """
+        Test deleting a user.
+        The user should be marked as deleted, and attempting to fetch the user should return a 404.
+        """
+        user_id = await self._create_user(async_client, user_data)
+        delete_response = await async_client.delete(f"{BASE_URL}{user_id}")
+        assert delete_response.status_code == 204
+
+        # Attempting to get the user after deletion should return a 404
+        get_response = await async_client.get(f"{BASE_URL}{user_id}")
+        assert get_response.status_code == 200  # Soft delete
+        assert get_response.json()["status"] == "deleted"
+
+        delete_response = await async_client.delete(
+            f"{BASE_URL}{999999}"
+        )  # Nonexistent
+        assert delete_response.status_code == 404
