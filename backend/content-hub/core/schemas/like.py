@@ -27,4 +27,3 @@ like_data = {
 }
 
 like = LikeOut(**like_data)
-print(like.created_at)

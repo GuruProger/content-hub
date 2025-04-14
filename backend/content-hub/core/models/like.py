@@ -3,6 +3,7 @@ from sqlalchemy import ForeignKey, DateTime, func
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
+from .mixins.timestamp_mixin import TimestampMixin
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -10,9 +11,7 @@ if TYPE_CHECKING:
     from .user import User
 
 
-class Like(Base):
-
-    __tablename__ = "likes"
+class Like(Base, TimestampMixin):
 
     article_id: Mapped[int] = mapped_column(
         ForeignKey("articles.id"),
@@ -21,9 +20,6 @@ class Like(Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"),
         primary_key=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
     )
     article: Mapped["Article"] = relationship("Article", back_populates="likes")
     user: Mapped["User"] = relationship("User", back_populates="likes")
