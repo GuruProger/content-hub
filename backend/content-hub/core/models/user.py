@@ -1,12 +1,18 @@
 from enum import Enum
+from typing import List
+
 from sqlalchemy import Enum as SQLEnum, LargeBinary
 from sqlalchemy import String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 
 from .mixins.id_mixin import IDMixin
 from .mixins.timestamp_mixin import TimestampMixin
 from .mixins.rating_mixin import RatingMixin
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .like import Like
 
 
 class UserRole(Enum):
@@ -59,13 +65,15 @@ class User(IDMixin, TimestampMixin, RatingMixin, Base):
 
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-    password_hash: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    password_hash: Mapped[bytes] = mapped_column(LargeBinary(60), nullable=False)
 
     role: Mapped[UserRole] = mapped_column(
         SQLEnum(UserRole, name="user_role"), nullable=True, default=UserRole.USER
     )
     avatar_url: Mapped[str] = mapped_column(String(255), nullable=True)
     bio: Mapped[str] = mapped_column(Text, nullable=True)
+
+    likes: Mapped[List["Like"]] = relationship("Like", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return (
