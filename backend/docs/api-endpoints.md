@@ -1,14 +1,12 @@
 ## **Users API**
 
 **Base URL:** `http://127.0.0.1:8000/api/v1/users`
-  
----
 
 ### **Create User**
 
 **POST** `/`
 
-Creates a new user with optional avatar upload.
+Creates a new user account. Supports optional avatar upload.
 
 #### Request Content Type:
 
@@ -20,41 +18,73 @@ Creates a new user with optional avatar upload.
 |------------|--------|----------|-------------------------------------|
 | `username` | string | yes      | Unique username (max 50 characters) |
 | `email`    | email  | yes      | Valid email address                 |
-| `bio`      | string | no       | Optional user bio (max 1000 chars)  |
-| `password` | string | yes      | User password (min 8, max 30 chars) |
+| `bio`      | string | no       | Optional bio (max 1000 characters)  |
+| `password` | string | yes      | Password (8–30 characters)          |
 | `avatar`   | file   | no       | Optional avatar image (binary file) |
 
 #### Example Request:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/users \
-  -F "username=johndoe" \
-  -F "email=john@example.com" \
-  -F "password=securepassword123" \
-  -F "bio=Just a regular guy" \
-  -F "avatar=@/path/to/avatar.jpg"
+curl -X POST http://127.0.0.1:8000/api/v1/users \  
+  -H 'accept: application/json' \  
+  -H 'Content-Type: multipart/form-data' \  
+  -F "username=johndoe" \  
+  -F "email=john@example.com" \  
+  -F "password=securepassword123" \  
+  -F "bio=Just a regular guy" \  
+  -F 'avatar=@avatar.jpg;type=image/jpeg'
 ```
 
 #### Responses:
 
-- **201 Created** — User successfully created.
-- **400 Bad Request** — Invalid or missing data.
-- **500 Internal Server Error** — Database error.
+| Code | Description                                    |
+|------|------------------------------------------------|
+| 201  | ✅ User successfully created                    |
+| 409  | ❌ Email or username already exists             |
+| 422  | ❌ Validation error (invalid or missing fields) |
+| 500  | ❌ Internal server/database error               |
 
-#### Example Response:
+#### Example Success Response:
 
 ```json
 {
-  "id": 1,
   "username": "johndoe",
   "email": "john@example.com",
   "bio": "Just a regular guy",
+  "id": 1,
+  "created_at": "2025-04-16T19:05:27.993045",
+  "rating": 0,
+  "is_admin": false,
   "avatar": true,
-  "created_at": "2025-04-08T12:00:00"
+  "status": "active"
 }
 ```
 
-> Note: The `avatar` field indicates whether the user has an avatar (`true` or `false`).
+#### Error Responses:
+
+Username conflict
+
+```json
+{
+  "detail": {
+    "loc": "username",
+    "msg": "Username already exists"
+  }
+}
+```
+
+Email conflict
+
+```json
+{
+  "detail": {
+    "loc": "email",
+    "msg": "Email already exists"
+  }
+}
+```
+
+> ℹ️ `avatar` returns a boolean (`true` if uploaded, otherwise `false`).
 
 ---
 
@@ -62,25 +92,30 @@ curl -X POST http://127.0.0.1:8000/api/v1/users \
 
 **GET** `/{user_id}`
 
-Retrieves a user by their ID, including avatar as a base64-encoded string if present.
+Fetches user data by ID. If the user has an avatar, it is returned as a base64 string.
 
 #### URL Parameters:
 
-| Parameter | Type | Required | Description    |
-|-----------|------|----------|----------------|
-| `user_id` | int  | yes      | ID of the user |
+| Parameter | Type | Required | Description           |
+|-----------|------|----------|-----------------------|
+| `user_id` | int  | yes      | ID of the target user |
 
 #### Example Request:
 
-```http
-GET /api/v1/users/1
+```bash
+curl -X 'GET' \
+  'http://0.0.0.0:8000/api/v1/users/1' \
+  -H 'accept: application/json'
 ```
 
 #### Responses:
 
-- **200 OK** — User data returned.
-- **404 Not Found** — User not found.
-- **500 Internal Server Error** — Database error.
+| Code | Description                      |
+|------|----------------------------------|
+| 200  | ✅ User found                     |
+| 404  | ❌ User not found                 |
+| 422  | ❌ Invalid `user_id` format       |
+| 500  | ❌ Internal server/database error |
 
 #### Example Response:
 
@@ -90,12 +125,15 @@ GET /api/v1/users/1
   "username": "johndoe",
   "email": "john@example.com",
   "bio": "Just a regular guy",
-  "avatar": "base64_encoded_string",
-  "created_at": "2025-04-08T12:00:00"
+  "created_at": "2025-04-16T18:55:36.719610",
+  "rating": 0,
+  "is_admin": false,
+  "avatar": "/9j/4AAQSkZJRgABAQEAZ...Po//9k=",
+  "status": "active"
 }
 ```
 
-> Note: The `avatar` field is a base64-encoded string in this endpoint if the user has an avatar.
+> ℹ️ `avatar` will contain a base64-encoded image string if uploaded.
 
 ---
 
@@ -103,7 +141,7 @@ GET /api/v1/users/1
 
 **PATCH** `/{user_id}`
 
-Updates user data, including optional avatar image.
+Updates user profile fields. All fields are optional. Avatar can also be replaced.
 
 #### Request Content Type:
 
@@ -111,48 +149,57 @@ Updates user data, including optional avatar image.
 
 #### URL Parameters:
 
-| Parameter | Type | Required | Description    |
-|-----------|------|----------|----------------|
-| `user_id` | int  | yes      | ID of the user |
+| Parameter | Type | Required | Description           |
+|-----------|------|----------|-----------------------|
+| `user_id` | int  | yes      | ID of the target user |
 
-#### Form Data Parameters (all optional):
+#### Form Data Parameters (optional):
 
 | Parameter  | Type   | Description                        |
 |------------|--------|------------------------------------|
 | `username` | string | New username (max 50 characters)   |
 | `email`    | email  | New email address                  |
-| `bio`      | string | New bio (max 1000 chars)           |
-| `password` | string | New password (min 8, max 30 chars) |
-| `avatar`   | file   | New avatar image                   |
+| `bio`      | string | Updated bio (max 1000 characters)  |
+| `password` | string | New password (8–30 characters)     |
+| `avatar`   | file   | Replace avatar image (binary file) |
 
 #### Example Request:
 
 ```bash
-curl -X PATCH http://127.0.0.1:8000/api/v1/users/1 \
-  -F "username=johndoe_updated" \
-  -F "avatar=@/path/to/new_avatar.jpg"
+curl -X 'PATCH' \
+  'http://0.0.0.0:8000/api/v1/users/1' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'username=johndoe_updated' \
+  -F 'email=john_updated@example.com' \
+  -F 'bio='
 ```
 
 #### Responses:
 
-- **200 OK** — User successfully updated.
-- **404 Not Found** — User not found.
-- **500 Internal Server Error** — Database error.
+| Code | Description                        |
+|------|------------------------------------|
+| 200  | ✅ User successfully updated        |
+| 404  | ❌ User not found                   |
+| 409  | ❌ Email or username already exists |
+| 422  | ❌ Invalid input or bad format      |
+| 500  | ❌ Database error                   |
 
 #### Example Response:
 
 ```json
 {
-  "id": 1,
   "username": "johndoe_updated",
-  "email": "john@example.com",
-  "bio": "Just a regular guy",
+  "email": "john_updated@example.com",
+  "bio": "",
+  "id": 1,
+  "created_at": "2025-04-16T18:55:36.719610",
+  "rating": 0,
+  "is_admin": false,
   "avatar": true,
-  "created_at": "2025-04-08T12:00:00"
+  "status": "active"
 }
 ```
-
-> Note: The `avatar` field indicates presence (`true` or `false`), not base64 data.
 
 ---
 
@@ -160,27 +207,32 @@ curl -X PATCH http://127.0.0.1:8000/api/v1/users/1 \
 
 **DELETE** `/{user_id}`
 
-Deletes a user by their ID.
+Soft-deletes a user by marking them as deleted in the database.
 
 #### URL Parameters:
 
-| Parameter | Type | Required | Description    |
-|-----------|------|----------|----------------|
-| `user_id` | int  | yes      | ID of the user |
+| Parameter | Type | Required | Description           |
+|-----------|------|----------|-----------------------|
+| `user_id` | int  | yes      | ID of the target user |
 
 #### Example Request:
 
-```http
-DELETE /api/v1/users/1
+```bash
+curl -X 'DELETE' \
+  'http://0.0.0.0:8000/api/v1/users/1' \
+  -H 'accept: */*'
 ```
 
 #### Responses:
 
-- **204 No Content** — User deleted successfully.
-- **404 Not Found** — User not found.
-- **500 Internal Server Error** — Database error.
+| Code | Description                                    |
+|------|------------------------------------------------|
+| 204  | ✅ User successfully deleted (no response body) |
+| 404  | ❌ User not found                               |
+| 422  | ❌ Invalid `user_id` format                     |
+| 500  | ❌ Internal server error                        |
 
-#### Example Error Response:
+#### Example Error:
 
 ```json
 {
@@ -190,11 +242,18 @@ DELETE /api/v1/users/1
 
 ---
 
+### Additional Notes
+
+| Feature                | Description                                                                |
+|------------------------|----------------------------------------------------------------------------|
+| **Soft Delete**        | Users are marked as deleted (`status = DELETED`) instead of being removed. |
+| **Avatar in response** | In GET — base64, in the rest — boolean true/false                          |
+
 ## **Articles API**
 
 **Base URL:** `http://127.0.0.1:8000/api/v1/articles`
-
----
+  
+---  
 
 ### **Create Article**
 
@@ -204,26 +263,26 @@ Creates a new article.
 
 #### Request Body Parameters:
 
-| Parameter      | Type      | Required | Description                         |
-|----------------|-----------|----------|-------------------------------------|
-| `title`        | `string`  | yes      | Article title (max. 255 characters) |
-| `content`      | `string`  | yes      | Article content                     |
-| `user_id`      | `int`     | yes      | ID of the author (user)             |
-| `is_published` | `boolean` | no       | Published status (default: `false`) |
+| Parameter      | Type      | Required | Description                         |  
+|----------------|-----------|----------|-------------------------------------|  
+| `title`        | `string`  | yes      | Article title (max. 255 characters) |  
+| `content`      | `string`  | yes      | Article content                     |  
+| `user_id`      | `int`     | yes      | ID of the author (user)             |  
+| `is_published` | `boolean` | no       | Published status (default: `false`) |  
 
 #### Example Request:
 
-```http
-POST /api/v1/articles
-Content-Type: application/json
-
-{
-  "title": "My First Article",
-  "content": "This is the content of the article.",
-  "user_id": 1,
-  "is_published": true
-}
-```
+```http  
+POST /api/v1/articles  
+Content-Type: application/json  
+  
+{  
+  "title": "My First Article",  
+  "content": "This is the content of the article.",  
+  "user_id": 1,  
+  "is_published": true  
+}  
+```  
 
 #### Responses:
 
@@ -233,7 +292,7 @@ Content-Type: application/json
 
 #### Example Successful Response (201):
 
-```json
+```json  
 {
   "id": 10,
   "title": "My First Article",
@@ -243,10 +302,11 @@ Content-Type: application/json
   "updated_at": "2025-03-21T12:30:00.000001",
   "rating": 0,
   "is_published": true
-}
-```
+}  
+```  
 
----
+  
+---  
 
 ### **Get Article by ID**
 
@@ -256,15 +316,15 @@ Retrieve an article by its ID.
 
 #### URL Parameters:
 
-| Parameter    | Type  | Required | Description |
-|--------------|-------|----------|-------------|
-| `article_id` | `int` | yes      | Article ID  |
+| Parameter    | Type  | Required | Description |  
+|--------------|-------|----------|-------------|  
+| `article_id` | `int` | yes      | Article ID  |  
 
 #### Example Request:
 
-```http
-GET /api/v1/articles/10
-```
+```http  
+GET /api/v1/articles/10  
+```  
 
 #### Responses:
 
@@ -274,7 +334,7 @@ GET /api/v1/articles/10
 
 #### Example Successful Response (200):
 
-```json
+```json  
 {
   "id": 10,
   "title": "My First Article",
@@ -284,18 +344,19 @@ GET /api/v1/articles/10
   "updated_at": "2025-03-21T12:30:00.000001",
   "rating": 0,
   "is_published": true
-}
-```
+}  
+```  
 
 #### Example Error (404):
 
-```json
+```json  
 {
   "detail": "Article not found"
-}
-```
+}  
+```  
 
----
+  
+---  
 
 ### **Get Articles by User**
 
@@ -305,15 +366,15 @@ Retrieve all articles created by a specific user.
 
 #### URL Parameters:
 
-| Parameter | Type  | Required | Description |
-|-----------|-------|----------|-------------|
-| `user_id` | `int` | yes      | User ID     |
+| Parameter | Type  | Required | Description |  
+|-----------|-------|----------|-------------|  
+| `user_id` | `int` | yes      | User ID     |  
 
 #### Example Request:
 
-```http
-GET /api/v1/articles/user/1
-```
+```http  
+GET /api/v1/articles/user/1  
+```  
 
 #### Responses:
 
@@ -322,7 +383,7 @@ GET /api/v1/articles/user/1
 
 #### Example Successful Response (200):
 
-```json
+```json  
 [
   {
     "id": 10,
@@ -344,10 +405,11 @@ GET /api/v1/articles/user/1
     "rating": 0,
     "is_published": false
   }
-]
-```
+]  
+```  
 
----
+  
+---  
 
 ### **Update Article**
 
@@ -357,31 +419,31 @@ Update an existing article.
 
 #### URL Parameters:
 
-| Parameter    | Type  | Required | Description |
-|--------------|-------|----------|-------------|
-| `article_id` | `int` | yes      | Article ID  |
+| Parameter    | Type  | Required | Description |  
+|--------------|-------|----------|-------------|  
+| `article_id` | `int` | yes      | Article ID  |  
 
 #### Request Body Parameters:
 
 All fields are optional.
 
-| Parameter      | Type      | Required | Description                        |
-|----------------|-----------|----------|------------------------------------|
-| `title`        | `string`  | no       | New article title (max. 255 chars) |
-| `content`      | `string`  | no       | New content                        |
-| `is_published` | `boolean` | no       | Published status                   |
+| Parameter      | Type      | Required | Description                        |  
+|----------------|-----------|----------|------------------------------------|  
+| `title`        | `string`  | no       | New article title (max. 255 chars) |  
+| `content`      | `string`  | no       | New content                        |  
+| `is_published` | `boolean` | no       | Published status                   |  
 
 #### Example Request:
 
-```http
-PATCH /api/v1/articles/10
-Content-Type: application/json
-
-{
-  "title": "Updated Article Title",
-  "is_published": true
-}
-```
+```http  
+PATCH /api/v1/articles/10  
+Content-Type: application/json  
+  
+{  
+  "title": "Updated Article Title",  
+  "is_published": true  
+}  
+```  
 
 #### Responses:
 
@@ -392,7 +454,7 @@ Content-Type: application/json
 
 #### Example Successful Response (200):
 
-```json
+```json  
 {
   "id": 10,
   "title": "Updated Article Title",
@@ -402,10 +464,11 @@ Content-Type: application/json
   "updated_at": "2025-03-21T13:30:00.000001",
   "rating": 0,
   "is_published": true
-}
-```
+}  
+```  
 
----
+  
+---  
 
 ### **Delete Article**
 
@@ -415,15 +478,15 @@ Delete an article by ID.
 
 #### URL Parameters:
 
-| Parameter    | Type  | Required | Description |
-|--------------|-------|----------|-------------|
-| `article_id` | `int` | yes      | Article ID  |
+| Parameter    | Type  | Required | Description |  
+|--------------|-------|----------|-------------|  
+| `article_id` | `int` | yes      | Article ID  |  
 
 #### Example Request:
 
-```http
-DELETE /api/v1/articles/10
-```
+```http  
+DELETE /api/v1/articles/10  
+```  
 
 #### Responses:
 
@@ -433,8 +496,8 @@ DELETE /api/v1/articles/10
 
 #### Example Error (404):
 
-```json
+```json  
 {
   "detail": "Article not found"
-}
+}  
 ```
