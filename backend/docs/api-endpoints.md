@@ -40,7 +40,10 @@ curl -X POST http://127.0.0.1:8000/api/v1/users \
 | Code | Description                                    |
 |------|------------------------------------------------|
 | 201  | ✅ User successfully created                    |
+| 400  | ❌ Avatar validation error                      |
 | 409  | ❌ Email or username already exists             |
+| 413  | ❌ Avatar file size too large                   |
+| 415  | ❌ Avatar file is not a valid image             |
 | 422  | ❌ Validation error (invalid or missing fields) |
 | 500  | ❌ Internal server/database error               |
 
@@ -83,6 +86,17 @@ Email conflict
   }
 }
 ```
+
+Unsupported File Type
+
+```json  
+{
+  "detail": {
+    "loc": "avatar",
+    "msg": "File must be an image"
+  }
+}  
+```  
 
 > ℹ️ `avatar` returns a boolean (`true` if uploaded, otherwise `false`).
 
@@ -180,8 +194,11 @@ curl -X 'PATCH' \
 | Code | Description                        |
 |------|------------------------------------|
 | 200  | ✅ User successfully updated        |
+| 400  | ❌ Avatar validation error          |
 | 404  | ❌ User not found                   |
 | 409  | ❌ Email or username already exists |
+| 413  | ❌ Avatar file size too large       |
+| 415  | ❌ Avatar file is not a valid image |
 | 422  | ❌ Invalid input or bad format      |
 | 500  | ❌ Database error                   |
 
