@@ -9,7 +9,9 @@ services:
       - ./backend:/app
     env_file:
       - ./backend/.env
-    command: poetry run python content-hub/main.py
+    command: python content-hub/main.py
+    depends_on:
+      - postgres_db
 
   postgres_db:
     image: postgres

@@ -2,14 +2,11 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY pyproject.toml poetry.lock ./
+COPY requirements.txt ./
 
-RUN pip install poetry==2.1.1
-
-# Installing project dependencies
-RUN poetry config virtualenvs.create false && poetry install --no-root
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-
-CMD ["poetry", "run", "python", "content-hub/main.py"]
+CMD ["python", "content-hub/main.py"]
