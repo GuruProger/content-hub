@@ -1,175 +1,220 @@
-## **User API**
+## **Users API**
 
 **Base URL:** `http://127.0.0.1:8000/api/v1/users`
-
----
 
 ### **Create User**
 
 **POST** `/`
 
-Creates a new user.
+Creates a new user account. Supports optional avatar upload.
 
-#### Request Body Parameters:
+#### Request Content Type:
 
-| Parameter    | Type     | Required | Description                       |
-|--------------|----------|----------|-----------------------------------|
-| `username`   | `string` | yes      | User's login (max. 25 characters) |
-| `email`      | `string` | yes      | User's email                      |
-| `bio`        | `string` | no       | Bio (max. 1000 characters)        |
-| `avatar_url` | `string` | no       | Avatar URL                        |
-| `password`   | `string` | yes      | Password (8-30 characters)        |
+`multipart/form-data`
+
+#### Form Data Parameters:
+
+| Parameter  | Type   | Required | Description                         |
+|------------|--------|----------|-------------------------------------|
+| `username` | string | yes      | Unique username (max 50 characters) |
+| `email`    | email  | yes      | Valid email address                 |
+| `bio`      | string | no       | Optional bio (max 1000 characters)  |
+| `password` | string | yes      | Password (8–30 characters)          |
+| `avatar`   | file   | no       | Optional avatar image (binary file) |
 
 #### Example Request:
 
-```http
-POST /api/v1/users
-Content-Type: application/json
-
-{
-  "username": "john_doe",
-  "email": "john@example.com",
-  "password": "securepassword",
-  "bio": "Hello! I'm John.",
-  "avatar_url": null
-}
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/users \  
+  -H 'accept: application/json' \  
+  -H 'Content-Type: multipart/form-data' \  
+  -F "username=johndoe" \  
+  -F "email=john@example.com" \  
+  -F "password=securepassword123" \  
+  -F "bio=Just a regular guy" \  
+  -F 'avatar=@avatar.jpg;type=image/jpeg'
 ```
 
 #### Responses:
 
-- **201 Created** — user successfully created.
-- **400 Bad Request** — invalid request data.
-- **500 Internal Server Error** — server error.
+| Code | Description                                    |
+|------|------------------------------------------------|
+| 201  | ✅ User successfully created                    |
+| 400  | ❌ Avatar validation error                      |
+| 409  | ❌ Email or username already exists             |
+| 413  | ❌ Avatar file size too large                   |
+| 415  | ❌ Avatar file is not a valid image             |
+| 422  | ❌ Validation error (invalid or missing fields) |
+| 500  | ❌ Internal server/database error               |
 
-#### Example Successful Response (201):
+#### Example Success Response:
 
 ```json
 {
-  "id": 1,
-  "username": "john_doe",
+  "username": "johndoe",
   "email": "john@example.com",
-  "bio": "Hello! I'm John.",
-  "avatar_url": null,
-  "created_at": "2025-03-21T12:30:00.000001",
+  "bio": "Just a regular guy",
+  "id": 1,
+  "created_at": "2025-04-16T19:05:27.993045",
   "rating": 0,
-  "role": "user"
+  "is_admin": false,
+  "avatar": true,
+  "status": "active"
 }
 ```
+
+#### Error Responses:
+
+Username conflict
+
+```json
+{
+  "detail": {
+    "loc": "username",
+    "msg": "Username already exists"
+  }
+}
+```
+
+Email conflict
+
+```json
+{
+  "detail": {
+    "loc": "email",
+    "msg": "Email already exists"
+  }
+}
+```
+
+Unsupported File Type
+
+```json  
+{
+  "detail": {
+    "loc": "avatar",
+    "msg": "File must be an image"
+  }
+}  
+```  
+
+> ℹ️ `avatar` returns a boolean (`true` if uploaded, otherwise `false`).
 
 ---
 
-### **Get User**
+### **Get User by ID**
 
 **GET** `/{user_id}`
 
-Retrieve user information by ID.
+Fetches user data by ID. If the user has an avatar, it is returned as a base64 string.
 
 #### URL Parameters:
 
-| Parameter | Type  | Required | Description |
-|-----------|-------|----------|-------------|
-| `user_id` | `int` | yes      | User ID     |
+| Parameter | Type | Required | Description           |
+|-----------|------|----------|-----------------------|
+| `user_id` | int  | yes      | ID of the target user |
 
 #### Example Request:
 
-```http
-GET /api/v1/users/1
+```bash
+curl -X 'GET' \
+  'http://0.0.0.0:8000/api/v1/users/1' \
+  -H 'accept: application/json'
 ```
 
 #### Responses:
 
-- **200 OK** — user found and data returned.
-- **404 Not Found** — user not found.
-- **500 Internal Server Error** — server error.
+| Code | Description                      |
+|------|----------------------------------|
+| 200  | ✅ User found                     |
+| 404  | ❌ User not found                 |
+| 422  | ❌ Invalid `user_id` format       |
+| 500  | ❌ Internal server/database error |
 
-#### Example Successful Response (200):
+#### Example Response:
 
 ```json
 {
   "id": 1,
-  "username": "john_doe",
+  "username": "johndoe",
   "email": "john@example.com",
-  "bio": "Hello! I'm John.",
-  "avatar_url": null,
-  "created_at": "2025-03-21T12:30:00.000001",
+  "bio": "Just a regular guy",
+  "created_at": "2025-04-16T18:55:36.719610",
   "rating": 0,
-  "role": "user"
+  "is_admin": false,
+  "avatar": "/9j/4AAQSkZJRgABAQEAZ...Po//9k=",
+  "status": "active"
 }
 ```
 
-#### Example Error (404):
-
-```json
-{
-  "detail": "User not found"
-}
-```
+> ℹ️ `avatar` will contain a base64-encoded image string if uploaded.
 
 ---
 
 ### **Update User**
 
-**PUT** `/{user_id}`
+**PATCH** `/{user_id}`
 
-Update user information.
+Updates user profile fields. All fields are optional. Avatar can also be replaced.
+
+#### Request Content Type:
+
+`multipart/form-data`
 
 #### URL Parameters:
 
-| Parameter | Type  | Required | Description |
-|-----------|-------|----------|-------------|
-| `user_id` | `int` | yes      | User ID     |
+| Parameter | Type | Required | Description           |
+|-----------|------|----------|-----------------------|
+| `user_id` | int  | yes      | ID of the target user |
 
-#### Request Body Parameters:
+#### Form Data Parameters (optional):
 
-All fields are optional.
-
-| Parameter    | Type     | Required | Description                       |
-|--------------|----------|----------|-----------------------------------|
-| `username`   | `string` | no       | New username (max. 25 characters) |
-| `email`      | `string` | no       | New email                         |
-| `bio`        | `string` | no       | New bio                           |
-| `avatar_url` | `string` | no       | New avatar URL                    |
-| `password`   | `string` | no       | New password (8-30 characters)    |
+| Parameter  | Type   | Description                        |
+|------------|--------|------------------------------------|
+| `username` | string | New username (max 50 characters)   |
+| `email`    | email  | New email address                  |
+| `bio`      | string | Updated bio (max 1000 characters)  |
+| `password` | string | New password (8–30 characters)     |
+| `avatar`   | file   | Replace avatar image (binary file) |
 
 #### Example Request:
 
-```http
-PUT /api/v1/users/1
-Content-Type: application/json
-
-{
-  "username": "john_updated",
-  "bio": "Updated bio"
-}
+```bash
+curl -X 'PATCH' \
+  'http://0.0.0.0:8000/api/v1/users/1' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'username=johndoe_updated' \
+  -F 'email=john_updated@example.com' \
+  -F 'bio='
 ```
 
 #### Responses:
 
-- **200 OK** — user successfully updated.
-- **404 Not Found** — user not found.
-- **400 Bad Request** — invalid request data.
-- **500 Internal Server Error** — server error.
+| Code | Description                        |
+|------|------------------------------------|
+| 200  | ✅ User successfully updated        |
+| 400  | ❌ Avatar validation error          |
+| 404  | ❌ User not found                   |
+| 409  | ❌ Email or username already exists |
+| 413  | ❌ Avatar file size too large       |
+| 415  | ❌ Avatar file is not a valid image |
+| 422  | ❌ Invalid input or bad format      |
+| 500  | ❌ Database error                   |
 
-#### Example Successful Response (200):
+#### Example Response:
 
 ```json
 {
+  "username": "johndoe_updated",
+  "email": "john_updated@example.com",
+  "bio": "",
   "id": 1,
-  "username": "john_updated",
-  "email": "john@example.com",
-  "bio": "Updated bio",
-  "avatar_url": null,
-  "created_at": "2025-03-21T12:30:00.000001",
+  "created_at": "2025-04-16T18:55:36.719610",
   "rating": 0,
-  "role": "user"
-}
-```
-
-#### Example Error (404):
-
-```json
-{
-  "detail": "User not found"
+  "is_admin": false,
+  "avatar": true,
+  "status": "active"
 }
 ```
 
@@ -179,27 +224,32 @@ Content-Type: application/json
 
 **DELETE** `/{user_id}`
 
-Delete a user by ID.
+Soft-deletes a user by marking them as deleted in the database.
 
 #### URL Parameters:
 
-| Parameter | Type  | Required | Description |
-|-----------|-------|----------|-------------|
-| `user_id` | `int` | yes      | User ID     |
+| Parameter | Type | Required | Description           |
+|-----------|------|----------|-----------------------|
+| `user_id` | int  | yes      | ID of the target user |
 
 #### Example Request:
 
-```http
-DELETE /api/v1/users/1
+```bash
+curl -X 'DELETE' \
+  'http://0.0.0.0:8000/api/v1/users/1' \
+  -H 'accept: */*'
 ```
 
 #### Responses:
 
-- **204 No Content** — user successfully deleted.
-- **404 Not Found** — user not found.
-- **500 Internal Server Error** — server error.
+| Code | Description                                    |
+|------|------------------------------------------------|
+| 204  | ✅ User successfully deleted (no response body) |
+| 404  | ❌ User not found                               |
+| 422  | ❌ Invalid `user_id` format                     |
+| 500  | ❌ Internal server error                        |
 
-#### Example Error (404):
+#### Example Error:
 
 ```json
 {
@@ -207,11 +257,20 @@ DELETE /api/v1/users/1
 }
 ```
 
+---
+
+### Additional Notes
+
+| Feature                | Description                                                                |
+|------------------------|----------------------------------------------------------------------------|
+| **Soft Delete**        | Users are marked as deleted (`status = DELETED`) instead of being removed. |
+| **Avatar in response** | In GET — base64, in the rest — boolean true/false                          |
+
 ## **Articles API**
 
 **Base URL:** `http://127.0.0.1:8000/api/v1/articles`
-
----
+  
+---  
 
 ### **Create Article**
 
@@ -221,26 +280,26 @@ Creates a new article.
 
 #### Request Body Parameters:
 
-| Parameter      | Type      | Required | Description                         |
-|----------------|-----------|----------|-------------------------------------|
-| `title`        | `string`  | yes      | Article title (max. 255 characters) |
-| `content`      | `string`  | yes      | Article content                     |
-| `user_id`      | `int`     | yes      | ID of the author (user)             |
-| `is_published` | `boolean` | no       | Published status (default: `false`) |
+| Parameter      | Type      | Required | Description                         |  
+|----------------|-----------|----------|-------------------------------------|  
+| `title`        | `string`  | yes      | Article title (max. 255 characters) |  
+| `content`      | `string`  | yes      | Article content                     |  
+| `user_id`      | `int`     | yes      | ID of the author (user)             |  
+| `is_published` | `boolean` | no       | Published status (default: `false`) |  
 
 #### Example Request:
 
-```http
-POST /api/v1/articles
-Content-Type: application/json
-
-{
-  "title": "My First Article",
-  "content": "This is the content of the article.",
-  "user_id": 1,
-  "is_published": true
-}
-```
+```http  
+POST /api/v1/articles  
+Content-Type: application/json  
+  
+{  
+  "title": "My First Article",  
+  "content": "This is the content of the article.",  
+  "user_id": 1,  
+  "is_published": true  
+}  
+```  
 
 #### Responses:
 
@@ -250,7 +309,7 @@ Content-Type: application/json
 
 #### Example Successful Response (201):
 
-```json
+```json  
 {
   "id": 10,
   "title": "My First Article",
@@ -260,10 +319,11 @@ Content-Type: application/json
   "updated_at": "2025-03-21T12:30:00.000001",
   "rating": 0,
   "is_published": true
-}
-```
+}  
+```  
 
----
+  
+---  
 
 ### **Get Article by ID**
 
@@ -273,15 +333,15 @@ Retrieve an article by its ID.
 
 #### URL Parameters:
 
-| Parameter    | Type  | Required | Description |
-|--------------|-------|----------|-------------|
-| `article_id` | `int` | yes      | Article ID  |
+| Parameter    | Type  | Required | Description |  
+|--------------|-------|----------|-------------|  
+| `article_id` | `int` | yes      | Article ID  |  
 
 #### Example Request:
 
-```http
-GET /api/v1/articles/10
-```
+```http  
+GET /api/v1/articles/10  
+```  
 
 #### Responses:
 
@@ -291,7 +351,7 @@ GET /api/v1/articles/10
 
 #### Example Successful Response (200):
 
-```json
+```json  
 {
   "id": 10,
   "title": "My First Article",
@@ -301,18 +361,19 @@ GET /api/v1/articles/10
   "updated_at": "2025-03-21T12:30:00.000001",
   "rating": 0,
   "is_published": true
-}
-```
+}  
+```  
 
 #### Example Error (404):
 
-```json
+```json  
 {
   "detail": "Article not found"
-}
-```
+}  
+```  
 
----
+  
+---  
 
 ### **Get Articles by User**
 
@@ -322,15 +383,15 @@ Retrieve all articles created by a specific user.
 
 #### URL Parameters:
 
-| Parameter | Type  | Required | Description |
-|-----------|-------|----------|-------------|
-| `user_id` | `int` | yes      | User ID     |
+| Parameter | Type  | Required | Description |  
+|-----------|-------|----------|-------------|  
+| `user_id` | `int` | yes      | User ID     |  
 
 #### Example Request:
 
-```http
-GET /api/v1/articles/user/1
-```
+```http  
+GET /api/v1/articles/user/1  
+```  
 
 #### Responses:
 
@@ -339,7 +400,7 @@ GET /api/v1/articles/user/1
 
 #### Example Successful Response (200):
 
-```json
+```json  
 [
   {
     "id": 10,
@@ -361,10 +422,11 @@ GET /api/v1/articles/user/1
     "rating": 0,
     "is_published": false
   }
-]
-```
+]  
+```  
 
----
+  
+---  
 
 ### **Update Article**
 
@@ -374,31 +436,31 @@ Update an existing article.
 
 #### URL Parameters:
 
-| Parameter    | Type  | Required | Description |
-|--------------|-------|----------|-------------|
-| `article_id` | `int` | yes      | Article ID  |
+| Parameter    | Type  | Required | Description |  
+|--------------|-------|----------|-------------|  
+| `article_id` | `int` | yes      | Article ID  |  
 
 #### Request Body Parameters:
 
 All fields are optional.
 
-| Parameter      | Type      | Required | Description                        |
-|----------------|-----------|----------|------------------------------------|
-| `title`        | `string`  | no       | New article title (max. 255 chars) |
-| `content`      | `string`  | no       | New content                        |
-| `is_published` | `boolean` | no       | Published status                   |
+| Parameter      | Type      | Required | Description                        |  
+|----------------|-----------|----------|------------------------------------|  
+| `title`        | `string`  | no       | New article title (max. 255 chars) |  
+| `content`      | `string`  | no       | New content                        |  
+| `is_published` | `boolean` | no       | Published status                   |  
 
 #### Example Request:
 
-```http
-PATCH /api/v1/articles/10
-Content-Type: application/json
-
-{
-  "title": "Updated Article Title",
-  "is_published": true
-}
-```
+```http  
+PATCH /api/v1/articles/10  
+Content-Type: application/json  
+  
+{  
+  "title": "Updated Article Title",  
+  "is_published": true  
+}  
+```  
 
 #### Responses:
 
@@ -409,7 +471,7 @@ Content-Type: application/json
 
 #### Example Successful Response (200):
 
-```json
+```json  
 {
   "id": 10,
   "title": "Updated Article Title",
@@ -419,10 +481,11 @@ Content-Type: application/json
   "updated_at": "2025-03-21T13:30:00.000001",
   "rating": 0,
   "is_published": true
-}
-```
+}  
+```  
 
----
+  
+---  
 
 ### **Delete Article**
 
@@ -432,15 +495,15 @@ Delete an article by ID.
 
 #### URL Parameters:
 
-| Parameter    | Type  | Required | Description |
-|--------------|-------|----------|-------------|
-| `article_id` | `int` | yes      | Article ID  |
+| Parameter    | Type  | Required | Description |  
+|--------------|-------|----------|-------------|  
+| `article_id` | `int` | yes      | Article ID  |  
 
 #### Example Request:
 
-```http
-DELETE /api/v1/articles/10
-```
+```http  
+DELETE /api/v1/articles/10  
+```  
 
 #### Responses:
 
@@ -450,8 +513,8 @@ DELETE /api/v1/articles/10
 
 #### Example Error (404):
 
-```json
+```json  
 {
   "detail": "Article not found"
-}
+}  
 ```

@@ -1,6 +1,5 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import Optional
 
 
 class ArticleBaseSchema(BaseModel):
@@ -8,6 +7,7 @@ class ArticleBaseSchema(BaseModel):
 
     title: str = Field(..., max_length=255)
     content: str
+    rating: float = 0.0
 
 
 class ArticleCreateSchema(ArticleBaseSchema):
@@ -20,9 +20,10 @@ class ArticleCreateSchema(ArticleBaseSchema):
 class ArticleUpdateSchema(BaseModel):
     """Model for updating article fields. All fields are optional."""
 
-    title: Optional[str] = Field(None, max_length=255)
-    content: Optional[str] = Field(None)
-    is_published: Optional[bool] = None
+    title: str | None = Field(None, max_length=255)
+    content: str | None = None
+    rating: float | None = None
+    is_published: bool | None = None
 
 
 class ArticleReadSchema(ArticleBaseSchema):
@@ -32,7 +33,6 @@ class ArticleReadSchema(ArticleBaseSchema):
     user_id: int
     created_at: datetime
     updated_at: datetime
-    rating: int
     is_published: bool
 
     class Config:
