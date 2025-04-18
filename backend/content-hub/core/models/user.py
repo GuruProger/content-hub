@@ -1,13 +1,18 @@
 from enum import Enum
+from typing import List
 
-from sqlalchemy import String, Text, Integer
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Enum as SQLEnum, Boolean, LargeBinary
+from sqlalchemy import Integer, Boolean, String, Text
+from sqlalchemy import Enum as SQLEnum, LargeBinary
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
-
 from .mixins.id_mixin import IDMixin
 from .mixins.timestamp_mixin import TimestampMixin
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .like import Like
 
 
 class AccountStatus(Enum):
@@ -66,6 +71,10 @@ class User(IDMixin, TimestampMixin, Base):
         SQLEnum(AccountStatus, name="account_status"),
         default=AccountStatus.ACTIVE,
         nullable=False,
+    )
+
+    likes: Mapped[List["Like"]] = relationship(
+        "Like", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
