@@ -3,12 +3,12 @@ __all__ = (
     "Base",
     "User",
     "Article",
-    "Like"
+    "LikeArticle"
 )
 
 from .db_helper import db_helper
 from .base import Base
-
-from .user import User
+from .likearticle import LikeArticle
 from .article import Article
-from .like import Like
+from .user import User
+

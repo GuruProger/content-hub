@@ -9,7 +9,7 @@ from typing import List
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .like import Like
+    from .likearticle import LikeArticle
     from .user import User
 
 
@@ -59,7 +59,7 @@ class Article(IDMixin, TimestampMixin, Base):
     is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     author: Mapped["User"] = relationship("User", backref="articles")
-    likes: Mapped[List["Like"]] = relationship("Like", back_populates="article", cascade="all, delete-orphan")
+    likes: Mapped[List["LikeArticle"]] = relationship("LikeArticle", back_populates="article", cascade="all, delete-orphan")
 
     include_updated_at = True  # For TimestampMixin
 

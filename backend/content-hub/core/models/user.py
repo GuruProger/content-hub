@@ -12,7 +12,7 @@ from .mixins.timestamp_mixin import TimestampMixin
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .like import Like
+    from .likearticle import LikeArticle
 
 
 class AccountStatus(Enum):
@@ -73,8 +73,8 @@ class User(IDMixin, TimestampMixin, Base):
         nullable=False,
     )
 
-    likes: Mapped[List["Like"]] = relationship(
-        "Like", back_populates="user", cascade="all, delete-orphan"
+    likes: Mapped[List["LikeArticle"]] = relationship(
+        "LikeArticle", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

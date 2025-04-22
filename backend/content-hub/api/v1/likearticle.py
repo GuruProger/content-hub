@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.models import db_helper
-from core.schemas.like import LikeCreate, LikeOut
-from crud.like import LikeManager
+from core.schemas.likearticle import LikeCreate, LikeOut
+from crud.likearticle import LikeManager
 
 
 router = APIRouter(tags=["likes"])
