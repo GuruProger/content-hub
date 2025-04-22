@@ -6,6 +6,7 @@ from .base import Base
 from .mixins.timestamp_mixin import TimestampMixin
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from .article import Article
     from .user import User
@@ -13,14 +14,8 @@ if TYPE_CHECKING:
 
 class Like(Base, TimestampMixin):
 
-    article_id: Mapped[int] = mapped_column(
-        ForeignKey("articles.id"),
-        primary_key=True
-    )
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id"),
-        primary_key=True
-    )
+    article_id: Mapped[int] = mapped_column(ForeignKey("article.id"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), primary_key=True)
     article: Mapped["Article"] = relationship("Article", back_populates="likes")
     user: Mapped["User"] = relationship("User", back_populates="likes")
 
