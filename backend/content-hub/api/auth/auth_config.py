@@ -1,4 +1,3 @@
-
 from jwt.exceptions import InvalidTokenError
 from fastapi import Depends, HTTPException, status, APIRouter
 from fastapi.security import OAuth2PasswordBearer
@@ -32,13 +31,14 @@ async def validate_auth_user(
 
     if not user or not auth_utils.validate_password(
         password=user_login.password,
-        hashed_password=user.password_hash,
+        hashed_password=user.password,
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password"
+            detail="Invalid username or password",
         )
     return user
+
 
 async def get_token_payload(
     token: str = Depends(oauth2_scheme),
@@ -122,11 +122,15 @@ async def register_user(
         new_user = User(
             username=user_data.username,
             email=user_data.email,
-            password_hash=hashed_password,
+            password=hashed_password,
         )
         session.add(new_user)
         await session.commit()
-        jwt_payload = {"sub": new_user.username, "username": new_user.username, "email": new_user.email}
+        jwt_payload = {
+            "sub": new_user.username,
+            "username": new_user.username,
+            "email": new_user.email,
+        }
         token = auth_utils.encode_jwt(jwt_payload)
         return Token(access_token=token, token_type="Bearer")
     except IntegrityError:
