@@ -10,5 +10,5 @@ from .db_helper import db_helper
 from .base import Base
 
 from .user import User
-from .like import Like
 from .article import Article
+from .like import Like

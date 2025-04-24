@@ -22,8 +22,3 @@ class LikeOut(LikeBase):
 
     class Config:
         from_attributes = True
-
-
-like_data = {"article_id": 1, "user_id": 1, "created_at": datetime.now(timezone.utc)}
-
-like = LikeOut(**like_data)
