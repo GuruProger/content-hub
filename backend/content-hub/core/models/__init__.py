@@ -8,7 +8,7 @@ __all__ = (
 
 from .db_helper import db_helper
 from .base import Base
-from .like import Like
-from .article import Article
-from .user import User
 
+from .user import User
+from .article import Article
+from .like import Like

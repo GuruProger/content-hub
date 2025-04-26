@@ -1,5 +1,6 @@
 services:
   backend:
+    container_name: backend-content-hub
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -9,9 +10,12 @@ services:
       - ./backend:/app
     env_file:
       - ./backend/.env
-    command: poetry run python content-hub/main.py
+    command: python content-hub/main.py
+    depends_on:
+      - postgres_db
 
   postgres_db:
+    container_name: postgres-content-hub
     image: postgres
     restart: always
     environment:
@@ -24,6 +28,18 @@ services:
       - postgres_data:/var/lib/postgresql/data
     env_file:
       - ./backend/.env
+
+  frontend:
+    container_name: frontend-content-hub
+    image: frontend-image
+    restart: always
+    build:
+      context: ./frontend
+      dockerfile: DockerFile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

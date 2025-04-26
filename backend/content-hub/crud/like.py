@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timezone
 from core.models.like import Like
+
 
 class LikeManager:
     def __init__(self, db_session: AsyncSession):
@@ -9,8 +9,7 @@ class LikeManager:
 
     async def get_like(self, article_id: int, user_id: int) -> Like | None:
         query = select(Like).filter(
-            Like.article_id == article_id,
-            Like.user_id == user_id
+            Like.article_id == article_id, Like.user_id == user_id
         )
         result = await self.db_session.execute(query)
         return result.scalar()
@@ -19,7 +18,6 @@ class LikeManager:
         new_like = Like(
             article_id=article_id,
             user_id=user_id,
-            created_at=datetime.now(timezone.utc)
         )
         self.db_session.add(new_like)
         await self.db_session.commit()
