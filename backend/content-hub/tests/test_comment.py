@@ -16,7 +16,7 @@ async def setup_test_user(get_async_session: AsyncSession) -> AsyncGenerator[Use
     hashed_password = hash_password("test_password")
     test_user_dict = {
         "username": "test_user",
-        "password_hash": hashed_password,
+        "password": hashed_password,
         "email": "test@gmail.com"
     }
     test_user = User(**test_user_dict)
@@ -36,7 +36,7 @@ async def setup_second_user(get_async_session: AsyncSession) -> AsyncGenerator[U
     hashed_password = hash_password("test_password")
     user_dict = {
         "username": "test_user2",
-        "password_hash": hashed_password,
+        "password": hashed_password,
         "email": "test2@gmail.com"
     }
     user = User(**user_dict)
