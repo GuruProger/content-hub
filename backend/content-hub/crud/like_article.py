@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
-from core.models.likearticle import LikeArticle
+from core.models.like_article import LikeArticle
 
 class LikeManager:
     def __init__(self, db_session: AsyncSession):

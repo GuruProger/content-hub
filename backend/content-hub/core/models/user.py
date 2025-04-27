@@ -12,7 +12,7 @@ from .mixins.timestamp_mixin import TimestampMixin
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .likearticle import LikeArticle
+    from .like_article import LikeArticle
     from .comment import Comment
 
 
@@ -74,7 +74,7 @@ class User(IDMixin, TimestampMixin, Base):
         nullable=False,
     )
 
-    likearticles: Mapped[List["LikeArticle"]] = relationship(
+    like_articles: Mapped[List["LikeArticle"]] = relationship(
         "LikeArticle", back_populates="user", cascade="all, delete-orphan"
     )
     comments: Mapped[List["Comment"]] = relationship(
