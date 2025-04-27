@@ -70,7 +70,7 @@ async def setup_test_article(get_async_session: AsyncSession, setup_test_user: U
 @pytest.mark.asyncio
 async def test_create_like(async_client, setup_test_user, setup_test_article):
     like_data = {"article_id": setup_test_article.id, "user_id": setup_test_user.id}
-    response = await async_client.post("api/v1/likes/", json=like_data)
+    response = await async_client.post("/api/v1/likearticles/", json=like_data)
     assert response.status_code == 201, f"Expected status 201 but got {response.status_code}"
     data = response.json()
     assert data["article_id"] == like_data["article_id"]
@@ -80,9 +80,9 @@ async def test_create_like(async_client, setup_test_user, setup_test_article):
 @pytest.mark.asyncio
 async def test_get_like(async_client, setup_test_user, setup_test_article):
     like_data = {"article_id": setup_test_article.id, "user_id": setup_test_user.id}
-    create_resp = await async_client.post("api/v1/likes/", json=like_data)
+    create_resp = await async_client.post("/api/v1/likearticles/", json=like_data)
     assert create_resp.status_code == 201, f"Creation failed: {create_resp.text}"
-    get_resp = await async_client.get(f"api/v1/likes/{like_data['article_id']}/{like_data['user_id']}")
+    get_resp = await async_client.get(f"/api/v1/likearticles/{like_data['article_id']}/{like_data['user_id']}")
     assert get_resp.status_code == 200, f"Get failed: {get_resp.text}"
     data = get_resp.json()
     assert data["article_id"] == like_data["article_id"]
@@ -92,9 +92,9 @@ async def test_get_like(async_client, setup_test_user, setup_test_article):
 @pytest.mark.asyncio
 async def test_create_duplicate_like(async_client, setup_test_user, setup_test_article):
     like_data = {"article_id": setup_test_article.id, "user_id": setup_test_user.id}
-    response1 = await async_client.post("api/v1/likes/", json=like_data)
+    response1 = await async_client.post("/api/v1/likearticles/", json=like_data)
     assert response1.status_code == 201, f"First creation failed: {response1.text}"
-    response2 = await async_client.post("api/v1/likes/", json=like_data)
+    response2 = await async_client.post("/api/v1/likearticles/", json=like_data)
     assert response2.status_code == 400, f"Duplicate creation did not fail: {response2.text}"
     data = response2.json()
     assert data.get("detail") == "Like already exists"
@@ -102,7 +102,7 @@ async def test_create_duplicate_like(async_client, setup_test_user, setup_test_a
 
 @pytest.mark.asyncio
 async def test_get_like_not_found(async_client):
-    response = await async_client.get("api/v1/likes/9999/9999")
+    response = await async_client.get("/api/v1/likearticles/9999/9999")
     assert response.status_code == 404, f"Expected 404 for non-existent like: {response.text}"
     data = response.json()
     assert data.get("detail") == "Like not found"
@@ -111,17 +111,17 @@ async def test_get_like_not_found(async_client):
 @pytest.mark.asyncio
 async def test_delete_like(async_client, setup_test_user, setup_test_article):
     like_data = {"article_id": setup_test_article.id, "user_id": setup_test_user.id}
-    create_resp = await async_client.post("api/v1/likes/", json=like_data)
+    create_resp = await async_client.post("/api/v1/likearticles/", json=like_data)
     assert create_resp.status_code == 201, f"Creation failed: {create_resp.text}"
-    delete_resp = await async_client.delete(f"api/v1/likes/{like_data['article_id']}/{like_data['user_id']}")
+    delete_resp = await async_client.delete(f"/api/v1/likearticles/{like_data['article_id']}/{like_data['user_id']}")
     assert delete_resp.status_code == 204, f"Deletion failed: {delete_resp.text}"
-    get_resp = await async_client.get(f"api/v1/likes/{like_data['article_id']}/{like_data['user_id']}")
+    get_resp = await async_client.get(f"/api/v1/likearticles/{like_data['article_id']}/{like_data['user_id']}")
     assert get_resp.status_code == 404, f"Deleted like still found: {get_resp.text}"
 
 
 @pytest.mark.asyncio
 async def test_delete_like_not_found(async_client):
-    response = await async_client.delete("api/v1/likes/8888/8888")
+    response = await async_client.delete("/api/v1/likearticles/8888/8888")
     assert response.status_code == 404, f"Expected 404 for deletion of non-existent like: {response.text}"
     data = response.json()
     assert data.get("detail") == "Like not found"
@@ -131,11 +131,11 @@ async def test_delete_like_not_found(async_client):
 async def test_list_likes_by_article(async_client, setup_test_article, setup_test_user, setup_second_user):
     payload1 = {"article_id": setup_test_article.id, "user_id": setup_test_user.id}
     payload2 = {"article_id": setup_test_article.id, "user_id": setup_second_user.id}
-    resp1 = await async_client.post("api/v1/likes/", json=payload1)
+    resp1 = await async_client.post("/api/v1/likearticles/", json=payload1)
     assert resp1.status_code == 201, f"Response: {resp1.text}"
-    resp2 = await async_client.post("api/v1/likes/", json=payload2)
+    resp2 = await async_client.post("/api/v1/likearticles/", json=payload2)
     assert resp2.status_code == 201, f"Response: {resp2.text}"
-    list_resp = await async_client.get(f"api/v1/likes/article/{setup_test_article.id}")
+    list_resp = await async_client.get(f"/api/v1/likearticles/article/{setup_test_article.id}")
     assert list_resp.status_code == 200, f"Listing likes for article failed: {list_resp.text}"
     data = list_resp.json()
     user_ids = {item.get("user_id") for item in data}
@@ -161,11 +161,11 @@ async def test_list_likes_by_user(async_client, setup_test_user, get_async_sessi
 
     payload1 = {"article_id": article1.id, "user_id": setup_test_user.id}
     payload2 = {"article_id": article2.id, "user_id": setup_test_user.id}
-    resp1 = await async_client.post("api/v1/likes/", json=payload1)
+    resp1 = await async_client.post("/api/v1/likearticles/", json=payload1)
     assert resp1.status_code == 201, f"Response: {resp1.text}"
-    resp2 = await async_client.post("api/v1/likes/", json=payload2)
+    resp2 = await async_client.post("/api/v1/likearticles/", json=payload2)
     assert resp2.status_code == 201, f"Response: {resp2.text}"
-    list_resp = await async_client.get(f"api/v1/likes/user/{setup_test_user.id}")
+    list_resp = await async_client.get(f"/api/v1/likearticles/user/{setup_test_user.id}")
     assert list_resp.status_code == 200, f"Listing likes for user failed: {list_resp.text}"
     data = list_resp.json()
     article_ids = {item.get("article_id") for item in data}
