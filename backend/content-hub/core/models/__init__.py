@@ -3,7 +3,8 @@ __all__ = (
     "Base",
     "User",
     "Article",
-    "LikeArticle"
+    "LikeArticle",
+    "Comment"
 )
 
 from .db_helper import db_helper
@@ -11,4 +12,5 @@ from .base import Base
 from .likearticle import LikeArticle
 from .article import Article
 from .user import User
+from .comment import Comment
 

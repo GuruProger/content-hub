@@ -5,7 +5,7 @@ from core.schemas.likearticle import LikeCreate, LikeOut
 from crud.likearticle import LikeManager
 
 
-router = APIRouter(tags=["likes"])
+router = APIRouter(tags=["Likearticles"])
 
 
 @router.get("/{article_id:int}/{user_id:int}", response_model=LikeOut)

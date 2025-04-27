@@ -4,7 +4,8 @@ from core.config import settings
 
 from .users import router as users_router
 from .articles import router as articles_router
-from .likearticle import router as likes_router
+from .likearticle import router as likearticles_router
+from .comment import router as comments_router
 
 router = APIRouter(
     prefix=settings.api.v1.prefix,
@@ -17,8 +18,11 @@ router.include_router(
     articles_router,
     prefix=settings.api.v1.articles,
 )
-
 router.include_router(
-    likes_router,
-    prefix=settings.api.v1.likes,
+    likearticles_router,
+    prefix=settings.api.v1.likearticles,
+)
+router.include_router(
+    comments_router,
+    prefix=settings.api.v1.comments,
 )
