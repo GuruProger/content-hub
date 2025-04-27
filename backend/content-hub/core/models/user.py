@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .likearticle import LikeArticle
+    from .comment import Comment
 
 
 class AccountStatus(Enum):
@@ -73,8 +74,11 @@ class User(IDMixin, TimestampMixin, Base):
         nullable=False,
     )
 
-    likes: Mapped[List["LikeArticle"]] = relationship(
+    likearticles: Mapped[List["LikeArticle"]] = relationship(
         "LikeArticle", back_populates="user", cascade="all, delete-orphan"
+    )
+    comments: Mapped[List["Comment"]] = relationship(
+        "Comment", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

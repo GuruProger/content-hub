@@ -14,8 +14,8 @@ class Comment(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    article_id: Mapped[int] = mapped_column(ForeignKey("articles.id"), nullable=False)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    article_id: Mapped[int] = mapped_column(ForeignKey("article.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False)
 
     article: Mapped["Article"] = relationship("Article", back_populates="comments")
     user: Mapped["User"] = relationship("User", back_populates="comments")
