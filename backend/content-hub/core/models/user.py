@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .like import Like
+    from .article import Article
 
 
 class AccountStatus(Enum):
@@ -73,6 +74,9 @@ class User(IDMixin, TimestampMixin, Base):
         nullable=False,
     )
 
+    articles: Mapped[List["Article"]] = relationship(
+        "Article", back_populates="author", cascade="all, delete-orphan"
+    )
     likes: Mapped[List["Like"]] = relationship(
         "Like", back_populates="user", cascade="all, delete-orphan"
     )

@@ -1,5 +1,6 @@
 from sqlalchemy import Boolean, ForeignKey, String, Text, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from .base import Base
 from .mixins.id_mixin import IDMixin
 from .mixins.timestamp_mixin import TimestampMixin
@@ -9,7 +10,7 @@ from typing import TYPE_CHECKING, List
 if TYPE_CHECKING:
     from .like import Like
     from .user import User
-    from .tag import ArticleTag
+    from .tag import Tag, ArticleTag
 
 
 class Article(IDMixin, TimestampMixin, Base):
@@ -57,7 +58,7 @@ class Article(IDMixin, TimestampMixin, Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False)
     is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
-    author: Mapped["User"] = relationship("User", backref="articles")
+    author: Mapped["User"] = relationship("User", back_populates="articles")
     likes: Mapped[List["Like"]] = relationship(
         "Like", back_populates="article", cascade="all, delete-orphan"
     )
@@ -65,7 +66,11 @@ class Article(IDMixin, TimestampMixin, Base):
         "ArticleTag", back_populates="article", cascade="all, delete-orphan"
     )
 
-    include_updated_at = True  # For TimestampMixin
+    _include_updated_at = True  # For TimestampMixin
+
+    @property
+    def tags(self) -> list["Tag"]:
+        return [at.tag for at in self.article_tags]
 
     def __repr__(self) -> str:
         return (

@@ -40,7 +40,7 @@ class ArticleTag(Base):
     tag_id: Mapped[int] = mapped_column(ForeignKey("tag.id"), primary_key=True)
 
     article: Mapped["Article"] = relationship("Article", back_populates="article_tags")
-    tag: Mapped["Tag"] = relationship("Tag", back_populates="article_tags")
+    tag: Mapped["Tag"] = relationship("Tag", back_populates="article_tags", lazy=False)
 
     def __repr__(self) -> str:
         return f"<ArticleTag(article_id={self.article_id}, tag_id={self.tag_id})>"
