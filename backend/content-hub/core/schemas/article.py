@@ -59,7 +59,14 @@ class ArticleReadSchema(ArticleBaseSchema):
     tags: List[TagReadSchema] = []
 
 
-class ArticlePreviewSchema(BaseModel):
-    """Model for previewing article information (without full content)"""
+class ArticlePreviewSchema(BaseModel, ConfigMixin):
+    """Model for previewing article information (without content)"""
 
-    content: str = Field(exclude=True)  # Исключаем content из модели
+    id: int
+    title: str
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+    is_published: bool
+    rating: float
+    tags: List[TagReadSchema] = []

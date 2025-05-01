@@ -3,11 +3,11 @@ from typing import Callable, Coroutine, Any
 
 
 from fastapi import HTTPException, status
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-def create_db_error_handler(unique_constraints: dict[str, dict]):
+def db_error_handler_decorator_factory(unique_constraints: dict[str, dict]):
     """
     Factory function that creates a database error handler decorator.
 
@@ -89,7 +89,7 @@ def create_db_error_handler(unique_constraints: dict[str, dict]):
     return decorator
 
 
-user_error_handler = create_db_error_handler(
+user_error_handler = db_error_handler_decorator_factory(
     {
         "uq_user_username": {
             "status_code": status.HTTP_409_CONFLICT,
@@ -101,3 +101,97 @@ user_error_handler = create_db_error_handler(
         },
     }
 )
+
+
+def article_error_handler(func):
+    """
+    Decorator for handling errors in article CRUD operations.
+
+    Handles various types of errors:
+    - SQLAlchemyError and its subclasses
+    - ValueError (validation errors)
+    - HTTPException (passes them through)
+    - Any other exceptions
+
+    Automatically performs session rollback on error.
+
+    Args:
+        func: Article CRUD operation function
+
+    Returns:
+        Wrapped function with error handling
+    """
+
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        # Find the session object in parameters
+        session = None
+        for arg in args:
+            if isinstance(arg, AsyncSession):
+                session = arg
+                break
+        if not session:
+            for key, arg in kwargs.items():
+                if isinstance(arg, AsyncSession):
+                    session = arg
+                    break
+
+        try:
+            return await func(*args, **kwargs)
+
+        except HTTPException:
+            # Pass through already created HTTPExceptions
+            raise
+
+        except NoResultFound:
+            # If scalar_one() was used and nothing was found
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
+            )
+
+        except IntegrityError as e:
+            if session:
+                await session.rollback()
+
+            # Check for uniqueness violation
+            error_msg = str(e).lower()
+            if "unique" in error_msg:  # Currently not in use
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Article with these properties already exists",
+                )
+
+            # Otherwise general data integrity error
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Database integrity error: {str(e)}",
+            )
+
+        except SQLAlchemyError as e:
+            if session:
+                await session.rollback()
+
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Database error: {str(e)}",
+            )
+
+        except ValueError as e:
+            if session:
+                await session.rollback()
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Validation error: {str(e)}",
+            )
+
+        except Exception as e:
+            if session:
+                await session.rollback()
+
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Unexpected error: {str(e)}",
+            )
+
+    return wrapper
