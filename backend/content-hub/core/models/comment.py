@@ -20,6 +20,7 @@ class Comment(Base, TimestampMixin):
     article: Mapped["Article"] = relationship("Article", back_populates="comments")
     user: Mapped["User"] = relationship("User", back_populates="comments")
 
+
     def __repr__(self) -> str:
         return (
             f"<Comment(id={self.id}, article_id={self.article_id}, "

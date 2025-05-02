@@ -60,7 +60,7 @@ class Article(IDMixin, TimestampMixin, Base):
     is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     author: Mapped["User"] = relationship("User", backref="articles")
-    likearticles: Mapped[List["LikeArticle"]] = relationship("LikeArticle", back_populates="article", cascade="all, delete-orphan")
+    like_articles: Mapped[List["LikeArticle"]] = relationship("LikeArticle", back_populates="article", cascade="all, delete-orphan")
     comments: Mapped[List["Comment"]] = relationship("Comment", back_populates="article", cascade="all, delete-orphan")
 
     include_updated_at = True  # For TimestampMixin

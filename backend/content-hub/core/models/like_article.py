@@ -47,8 +47,8 @@ class LikeArticle(Base, TimestampMixin):
         ForeignKey("user.id"),
         primary_key=True
     )
-    article: Mapped["Article"] = relationship("Article", back_populates="likearticles")
-    user: Mapped["User"] = relationship("User", back_populates="likearticles")
+    article: Mapped["Article"] = relationship("Article", back_populates="like_articles")
+    user: Mapped["User"] = relationship("User", back_populates="like_articles")
 
     def __repr__(self) -> str:
         return (

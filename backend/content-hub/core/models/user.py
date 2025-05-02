@@ -74,7 +74,7 @@ class User(IDMixin, TimestampMixin, Base):
         nullable=False,
     )
 
-    likearticles: Mapped[List["LikeArticle"]] = relationship(
+    like_articles: Mapped[List["LikeArticle"]] = relationship(
         "LikeArticle", back_populates="user", cascade="all, delete-orphan"
     )
     comments: Mapped[List["Comment"]] = relationship(
