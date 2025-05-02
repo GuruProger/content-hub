@@ -12,7 +12,7 @@ from .mixins.timestamp_mixin import TimestampMixin
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .likearticle import LikeArticle
+    from .like_article import LikeArticle
     from .comment import Comment
 
 

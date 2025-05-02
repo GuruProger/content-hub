@@ -9,7 +9,7 @@ from typing import List
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .likearticle import LikeArticle
+    from .like_article import LikeArticle
     from .user import User
     from .comment import Comment
 
