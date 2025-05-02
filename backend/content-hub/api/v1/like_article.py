@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.models import db_helper
-from core.schemas.like import LikeCreate, LikeOut
-from crud.like import LikeManager
+from core.schemas.likearticle import LikeCreate, LikeOut
+from crud.like_article import LikeManager
 
 
-router = APIRouter(tags=["likes"])
+router = APIRouter(tags=["Likearticles"])
 
 
 @router.get("/{article_id:int}/{user_id:int}", response_model=LikeOut)

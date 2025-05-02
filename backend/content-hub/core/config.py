@@ -69,7 +69,8 @@ class ApiV1Prefix(BaseModel):
     # Prefixes for users endpoints
     users: str = "/users"
     articles: str = "/articles"
-    likes: str = "/likes"
+    like_articles: str = "/like_articles"
+    comments: str = "/comments"
 
 
 class ApiPrefix(BaseModel):
