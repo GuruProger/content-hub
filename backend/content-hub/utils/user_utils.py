@@ -4,7 +4,7 @@ from fastapi import UploadFile, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from io import BytesIO
 from PIL import Image
-# import imghdr
+import imghdr
 
 from core.models import User
 

@@ -65,7 +65,6 @@ async def delete_comment_endpoint(
             detail="Comment not found"
         )
     await manager.delete_comment(comment_id)
-    return None
 
 
 @router.get("/article/{article_id:int}", response_model=list[CommentOut])
