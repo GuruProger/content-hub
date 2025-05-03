@@ -280,12 +280,13 @@ Creates a new article.
 
 #### Request Body Parameters:
 
-| Parameter      | Type      | Required | Description                         |  
-|----------------|-----------|----------|-------------------------------------|  
-| `title`        | `string`  | yes      | Article title (max. 255 characters) |  
-| `content`      | `string`  | yes      | Article content                     |  
-| `user_id`      | `int`     | yes      | ID of the author (user)             |  
-| `is_published` | `boolean` | no       | Published status (default: `false`) |  
+| Parameter      | Type       | Required | Description                         |  
+|----------------|------------|----------|-------------------------------------|  
+| `title`        | `string`   | yes      | Article title (max. 255 characters) |  
+| `content`      | `string`   | yes      | Article content                     |  
+| `user_id`      | `int`      | yes      | ID of the author (user)             |  
+| `is_published` | `boolean`  | no       | Published status (default: `false`) |  
+| `tags`         | `string[]` | no       | Array of tag names                  |  
 
 #### Example Request:
 
@@ -297,7 +298,8 @@ Content-Type: application/json
   "title": "My First Article",  
   "content": "This is the content of the article.",  
   "user_id": 1,  
-  "is_published": true  
+  "is_published": true,
+  "tags": ["programming", "python", "fastapi"]
 }  
 ```  
 
@@ -318,7 +320,21 @@ Content-Type: application/json
   "created_at": "2025-03-21T12:30:00.000001",
   "updated_at": "2025-03-21T12:30:00.000001",
   "rating": 0,
-  "is_published": true
+  "is_published": true,
+  "tags": [
+    {
+      "id": 1,
+      "name": "programming"
+    },
+    {
+      "id": 2,
+      "name": "python"
+    },
+    {
+      "id": 3,
+      "name": "fastapi"
+    }
+  ]
 }  
 ```  
 
@@ -360,7 +376,21 @@ GET /api/v1/articles/10
   "created_at": "2025-03-21T12:30:00.000001",
   "updated_at": "2025-03-21T12:30:00.000001",
   "rating": 0,
-  "is_published": true
+  "is_published": true,
+  "tags": [
+    {
+      "id": 1,
+      "name": "programming"
+    },
+    {
+      "id": 2,
+      "name": "python"
+    },
+    {
+      "id": 3,
+      "name": "fastapi"
+    }
+  ]
 }  
 ```  
 
@@ -405,22 +435,36 @@ GET /api/v1/articles/user/1
   {
     "id": 10,
     "title": "My First Article",
-    "content": "This is the content of the article.",
     "user_id": 1,
     "created_at": "2025-03-21T12:30:00.000001",
     "updated_at": "2025-03-21T12:30:00.000001",
     "rating": 0,
-    "is_published": true
+    "is_published": true,
+    "tags": [
+      {
+        "id": 1,
+        "name": "programming"
+      },
+      {
+        "id": 2,
+        "name": "python"
+      }
+    ]
   },
   {
     "id": 11,
     "title": "Another Article",
-    "content": "Another article's content.",
     "user_id": 1,
     "created_at": "2025-03-21T13:00:00.000001",
     "updated_at": "2025-03-21T13:00:00.000001",
     "rating": 0,
-    "is_published": false
+    "is_published": false,
+    "tags": [
+      {
+        "id": 3,
+        "name": "fastapi"
+      }
+    ]
   }
 ]  
 ```  
@@ -444,11 +488,12 @@ Update an existing article.
 
 All fields are optional.
 
-| Parameter      | Type      | Required | Description                        |  
-|----------------|-----------|----------|------------------------------------|  
-| `title`        | `string`  | no       | New article title (max. 255 chars) |  
-| `content`      | `string`  | no       | New content                        |  
-| `is_published` | `boolean` | no       | Published status                   |  
+| Parameter      | Type       | Required | Description                        |  
+|----------------|------------|----------|------------------------------------|  
+| `title`        | `string`   | no       | New article title (max. 255 chars) |  
+| `content`      | `string`   | no       | New content                        |  
+| `is_published` | `boolean`  | no       | Published status                   |  
+| `tags`         | `string[]` | no       | Array of tag names (replaces existing tags) |  
 
 #### Example Request:
 
@@ -458,7 +503,8 @@ Content-Type: application/json
   
 {  
   "title": "Updated Article Title",  
-  "is_published": true  
+  "is_published": true,
+  "tags": ["programming", "tutorial"]
 }  
 ```  
 
@@ -480,7 +526,17 @@ Content-Type: application/json
   "created_at": "2025-03-21T12:30:00.000001",
   "updated_at": "2025-03-21T13:30:00.000001",
   "rating": 0,
-  "is_published": true
+  "is_published": true,
+  "tags": [
+    {
+      "id": 1,
+      "name": "programming"
+    },
+    {
+      "id": 4,
+      "name": "tutorial"
+    }
+  ]
 }  
 ```  
 
@@ -517,4 +573,80 @@ DELETE /api/v1/articles/10
 {
   "detail": "Article not found"
 }  
+```
+
+### **Get Suggested Articles**
+
+**GET** `/suggested/`
+
+Retrieve a list of suggested articles.
+
+#### Query Parameters:
+
+| Parameter | Type  | Required | Default | Description                            |  
+|-----------|-------|----------|---------|----------------------------------------|  
+| `count`   | `int` | no       | 5       | Number of articles to return (1-20)    |  
+
+#### Example Request:
+
+```http  
+GET /api/v1/articles/suggested/?count=3  
+```  
+
+#### Responses:
+
+- **200 OK** — list of suggested articles returned.
+- **422 Unprocessable Entity** — invalid query parameters.
+- **500 Internal Server Error** — server error.
+
+#### Example Successful Response (200):
+
+```json  
+[
+  {
+    "id": 10,
+    "title": "My First Article",
+    "user_id": 1,
+    "created_at": "2025-03-21T12:30:00.000001",
+    "updated_at": "2025-03-21T12:30:00.000001",
+    "rating": 0,
+    "is_published": true,
+    "tags": [
+      {
+        "id": 1,
+        "name": "programming"
+      }
+    ]
+  },
+  {
+    "id": 15,
+    "title": "Popular Article",
+    "user_id": 2,
+    "created_at": "2025-03-21T10:30:00.000001",
+    "updated_at": "2025-03-21T10:30:00.000001",
+    "rating": 0,
+    "is_published": true,
+    "tags": [
+      {
+        "id": 2,
+        "name": "python"
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "title": "Another Suggested Article",
+    "user_id": 3,
+    "created_at": "2025-03-20T15:30:00.000001",
+    "updated_at": "2025-03-20T15:30:00.000001",
+    "rating": 0,
+    "is_published": true,
+    "tags": [
+      {
+        "id": 3,
+        "name": "fastapi"
+      }
+    ]
+  }
+]  
 ```

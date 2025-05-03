@@ -1,8 +1,8 @@
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timezone
 from core.models.comment import Comment
+
 
 class CommentManager:
     def __init__(self, db_session: AsyncSession):
@@ -13,12 +13,13 @@ class CommentManager:
         result = await self.db_session.execute(query)
         return result.scalar()
 
-    async def create_comment(self, content: str, article_id: int, user_id: int) -> Comment:
+    async def create_comment(
+        self, content: str, article_id: int, user_id: int
+    ) -> Comment:
         new_comment = Comment(
             content=content,
             article_id=article_id,
             user_id=user_id,
-            created_at=datetime.now(timezone.utc)
         )
         self.db_session.add(new_comment)
         await self.db_session.commit()
@@ -29,8 +30,7 @@ class CommentManager:
         comment = await self.get_comment(comment_id)
         if not comment:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Comment not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found"
             )
         comment.content = new_content
         await self.db_session.commit()
