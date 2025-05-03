@@ -19,7 +19,6 @@ class LikeCommentManager:
         new_like = LikeComment(
             comment_id=comment_id,
             user_id=user_id,
-            created_at=datetime.now(timezone.utc)
         )
         self.db_session.add(new_like)
         await self.db_session.commit()
