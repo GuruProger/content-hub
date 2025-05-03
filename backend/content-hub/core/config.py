@@ -87,13 +87,20 @@ class AuthJWT(BaseModel):
     access_token_expire_minutes: int = 10
 
 
+class ArticleConfig(BaseModel):
+    """Configuration for article-related settings"""
+
+    max_tags: int = 20  # Maximum number of tags allowed for an article
+
+
 class Settings(BaseSettings):
     """Main settings class"""
 
     run: RunConfig = RunConfig()  # Application run configuration
     api: ApiPrefix = ApiPrefix()  # API prefix configuration
     db: DatabaseConfig = DatabaseConfig()  # Database configuration
-    auth_jwt: AuthJWT = AuthJWT()
+    auth_jwt: AuthJWT = AuthJWT()  # JWT authentication configuration
+    article: ArticleConfig = ArticleConfig()  # Article-related configuration
 
 
 settings = Settings()

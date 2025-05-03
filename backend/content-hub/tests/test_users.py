@@ -2,15 +2,17 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+import pytest_asyncio
+
 from core.schemas.user import UserReadSchema
 from .conftest import async_client
 
 BASE_URL = "/api/v1/users/"  # Base URL for user API endpoints
 
 
-# Fixture to generate random user data for testing
-@pytest.fixture
-def user_data():
+@pytest_asyncio.fixture(scope="function")
+async def user_data():
+    """Generate random user data for testing purposes."""
     return {
         "username": f"test_user_{uuid4().hex[:8]}",
         "email": f"test_{uuid4().hex[:8]}@example.com",
@@ -19,9 +21,9 @@ def user_data():
     }
 
 
-# Fixture to provide an avatar file for testing
-@pytest.fixture
-def avatar_file():
+@pytest_asyncio.fixture(scope="function")
+async def avatar_file():
+    """Provide a test avatar file from the test_data directory."""
     avatar_path = Path(__file__).parent / "test_data" / "avatar.jpg"
     assert avatar_path.exists(), f"Test avatar file not found at {avatar_path}"
     return avatar_path
@@ -29,6 +31,14 @@ def avatar_file():
 
 # Test class for User API endpoints
 class TestUserAPI:
+    """
+    Test suite for User API endpoints.
+
+    This class contains tests for all CRUD operations on user resources,
+    including creation, retrieval, updating, and deletion of users.
+    It also includes tests for edge cases like duplicate users, missing fields,
+    and non-existent user operations.
+    """
 
     @staticmethod
     async def _create_user(async_client, user_data):

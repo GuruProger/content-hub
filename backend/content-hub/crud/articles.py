@@ -1,164 +1,264 @@
-from typing import Type, Sequence
+from typing import Sequence
 
-from sqlalchemy import select
 from fastapi import HTTPException, status
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload, load_only
 
-from core.models import Article
+
+from core.models import Article, ArticleTag
 from core.schemas.article import ArticleCreateSchema, ArticleUpdateSchema
+from core.config import settings
+from utils.article_utils import (
+    delete_unused_tags,
+    process_tags,
+    sync_article_tags,
+    validate_tags,
+)
+from utils.decorators import article_error_handler
 
 
+@article_error_handler
 async def create_article(
     session: AsyncSession,
     article_create: ArticleCreateSchema,
 ) -> Article:
     """
-    Create a new article in the database.
+    Create a new article with tags in the database.
+    Handles article creation, tag processing, and database transactions.
 
     :param session: AsyncSession for database interaction
-    :param article_create: Article creation data (including user_id)
-    :return: The created article
+    :param article_create: Article creation data (including tags)
+    :return: The created article with loaded tags
     """
-    try:
-        article_data = article_create.model_dump()
-        article = Article(**article_data)
+    # Extract article data excluding tags (handled separately)
+    article_data = article_create.model_dump(exclude={"tags"})
+    article = Article(**article_data)
+    session.add(article)
+    await session.flush()  # Flush to get the article ID before adding tags
 
-        session.add(article)
-        await session.commit()
-        await session.refresh(article)
+    # Process tags if provided
+    if article_create.tags:
+        validate_tags(article_create.tags, settings.article.max_tags)
 
-        return article
+        # Get or create tags and associate with article
+        tags = await process_tags(session, article_create.tags)
+        for tag in tags:
+            session.add(ArticleTag(article_id=article.id, tag_id=tag.id))
 
-    except SQLAlchemyError:
-        await session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error",
-        )
+    # Commit transaction
+    await session.commit()
+
+    # Refresh to load relationships
+    await session.refresh(article, ["article_tags"])
+    return article
 
 
+@article_error_handler
 async def get_article(
     session: AsyncSession,
     article_id: int,
-) -> Type[Article]:
+) -> Article:
     """
-    Retrieve an article by its ID.
+    Retrieve an article with its tags by ID.
+    Uses eager loading for tags to avoid N+1 query problem.
 
     :param session: AsyncSession for database interaction
-    :param article_id: The ID of the article to retrieve
-    :return: The retrieved article
+    :param article_id: ID of the article to retrieve
+    :return: Article with loaded tags
     """
-    try:
-        article = await session.get(Article, article_id)
-        if article is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Article not found",
-            )
-        return article
-    except SQLAlchemyError:
+    # Build query with eager loading of tags
+    stmt = (
+        select(Article)
+        .where(Article.id == article_id)
+        .options(
+            selectinload(
+                Article.article_tags
+            ).selectinload(  # Load through junction table
+                ArticleTag.tag
+            )  # Then load actual tags
+        )
+    )
+    result = await session.execute(stmt)
+    article = result.scalar_one_or_none()
+
+    if not article:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
         )
 
+    return article
 
+
+@article_error_handler
+async def update_article(
+    session: AsyncSession,
+    article_id: int,
+    article_update: ArticleUpdateSchema,
+) -> Article:
+    """
+    Update an article and its tags.
+    Handles partial updates and tag synchronization.
+
+    :param session: AsyncSession for database interaction
+    :param article_id: ID of the article to update
+    :param article_update: Article update data (including optional tags)
+    :return: Updated article with loaded tags
+    """
+    # Load article with tags
+    stmt = (
+        select(Article)
+        .where(Article.id == article_id)
+        .options(selectinload(Article.article_tags).selectinload(ArticleTag.tag))
+    )
+    result = await session.execute(stmt)
+    article = result.scalar_one_or_none()
+
+    if not article:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
+        )
+
+    # Apply partial update to article fields
+    update_data = article_update.model_dump(
+        exclude_unset=True,  # Only include provided fields
+        exclude={"tags"},  # Handle tags separately
+    )
+    for field, value in update_data.items():
+        setattr(article, field, value)
+
+    # Process tags if provided in update
+    if article_update.tags is not None:
+        validate_tags(article_update.tags, settings.article.max_tags)
+
+        # Synchronize tags (add new, remove unused)
+        await sync_article_tags(
+            session=session, article=article, new_tag_names=article_update.tags
+        )
+
+    # Update the article in the database before commit
+    await session.flush()
+
+    # Commit changes
+    await session.commit()
+
+    # Fully refresh the article object from the database
+    await session.refresh(article)
+
+    return article
+
+
+@article_error_handler
+async def delete_article(
+    session: AsyncSession,
+    article_id: int,
+    cleanup_unused_tags: bool = True,
+) -> None:
+    """
+    Delete an article and optionally remove unused tags.
+    Performs cleanup of orphaned tags if requested.
+
+    :param session: AsyncSession for database interaction
+    :param article_id: ID of the article to delete
+    :param cleanup_unused_tags: If True, removes tags not used in other articles
+    """
+    # Get article (simple load without relationships)
+    article = await session.get(Article, article_id)
+    if not article:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
+        )
+
+    await session.delete(article)
+    await session.commit()
+
+    # Clean up unused tags if requested
+    if cleanup_unused_tags:
+        await delete_unused_tags(session)
+
+
+@article_error_handler
 async def get_user_articles(
     session: AsyncSession,
     user_id: int,
 ) -> Sequence[Article]:
     """
-    Retrieve all articles for a specific user by user_id.
+    Retrieve all articles for a user (excluding content) with their tags.
+    Optimized for listing - doesn't load article content.
 
     :param session: AsyncSession for database interaction
-    :param user_id: ID of the user whose articles we want to retrieve
-    :return: List of articles belonging to the user
+    :param user_id: ID of the user whose articles to retrieve
+    :return: List of articles (without content) with loaded tags
     """
-    try:
-        result = await session.execute(
-            select(Article).where(Article.user_id == user_id)
+    # Build optimized query for listing
+    stmt = (
+        select(Article)
+        .where(Article.user_id == user_id)
+        .options(
+            # Eager load tags
+            selectinload(Article.article_tags).selectinload(ArticleTag.tag),
+            # Only select specific columns (exclude content)
+            load_only(
+                Article.id,
+                Article.title,
+                Article.rating,
+                Article.user_id,
+                Article.created_at,
+                Article.updated_at,
+                Article.is_published,
+            ),
         )
-        articles = result.scalars().all()
+    )
+    result = await session.execute(stmt)
+    articles = result.scalars().all()
 
-        if articles is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No articles found for this user",
+    return articles
+
+
+@article_error_handler
+async def get_suggested_articles(
+    session: AsyncSession,
+    count: int = 5,
+    random_fallback: bool = True,
+) -> Sequence[Article]:
+    """
+    Get suggested articles (currently random, to be replaced with recommendation system later).
+    Serves as placeholder for more sophisticated recommendation logic.
+
+    :param session: AsyncSession for database interaction
+    :param count: Number of articles to return (1-20)
+    :param random_fallback: Use random selection if no recommendations available
+    :return: List of suggested articles with loaded tags
+    """
+    # Validate count parameter
+    if not 1 <= count <= 20:
+        raise ValueError("count must be between 1 and 20")
+
+    # Currently implements random fallback only
+    if random_fallback:
+        stmt = (
+            select(Article)
+            .options(
+                # Eager load tags
+                selectinload(Article.article_tags).selectinload(ArticleTag.tag),
+                # Optimize for listing
+                load_only(
+                    Article.id,
+                    Article.title,
+                    Article.rating,
+                    Article.user_id,
+                    Article.created_at,
+                    Article.updated_at,
+                    Article.is_published,
+                ),
             )
+            .order_by(func.random())  # Random ordering
+            .limit(count)
+        )
 
+        result = await session.execute(stmt)
+        articles = result.scalars().all()
         return articles
 
-    except SQLAlchemyError:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error",
-        )
-
-
-async def update_article(
-    session: AsyncSession,
-    article_id: int,
-    article_update: ArticleUpdateSchema,
-) -> Type[Article]:
-    """
-    Update an existing article's data.
-
-    :param session: AsyncSession for database interaction
-    :param article_id: The ID of the article to update
-    :param article_update: The data to update the article with
-    :return: The updated article
-    """
-    try:
-        article = await session.get(Article, article_id)
-        if article is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Article not found",
-            )
-
-        update_data = article_update.model_dump(exclude_unset=True)
-
-        for field, value in update_data.items():
-            setattr(article, field, value)
-
-        await session.commit()
-        await session.refresh(article)
-        return article
-
-    except SQLAlchemyError:
-        await session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error",
-        )
-
-
-async def delete_article(
-    session: AsyncSession,
-    article_id: int,
-) -> None:
-    """
-    Delete an article by its ID.
-
-    :param session: AsyncSession for database interaction
-    :param article_id: The ID of the article to delete
-    :return: None
-    """
-    try:
-        article = await session.get(Article, article_id)
-        if article is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Article not found",
-            )
-
-        await session.delete(article)
-        await session.commit()
-
-    except SQLAlchemyError:
-        await session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error",
-        )
+    # Placeholder for future recommendation logic
+    return []
