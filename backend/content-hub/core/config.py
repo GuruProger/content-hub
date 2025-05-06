@@ -71,6 +71,7 @@ class ApiV1Prefix(BaseModel):
     articles: str = "/articles"
     like_articles: str = "/like_articles"
     comments: str = "/comments"
+    like_comments: str = "/like_comments"
 
 
 class ApiPrefix(BaseModel):

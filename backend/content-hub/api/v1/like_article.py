@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.models import db_helper
-from core.schemas.likearticle import LikeCreate, LikeOut
+from core.schemas.like_article import LikeCreate, LikeOut
 from crud.like_article import LikeManager
 
 

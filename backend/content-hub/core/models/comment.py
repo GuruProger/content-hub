@@ -4,10 +4,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 from .mixins.timestamp_mixin import TimestampMixin
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 if TYPE_CHECKING:
     from .article import Article
     from .user import User
+    from .like_comment import LikeComment
 
 
 class Comment(Base, TimestampMixin):
@@ -19,7 +20,9 @@ class Comment(Base, TimestampMixin):
 
     article: Mapped["Article"] = relationship("Article", back_populates="comments")
     user: Mapped["User"] = relationship("User", back_populates="comments")
-
+    like_comments: Mapped[List["LikeComment"]] = relationship(
+        "LikeComment", back_populates="comment", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return (
