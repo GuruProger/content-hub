@@ -1,44 +1,37 @@
 from datetime import datetime
-from typing import ClassVar
+from typing import ClassVar, Optional
 
-from sqlalchemy import event, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import event, func, DateTime
+from sqlalchemy.orm import Mapped, mapped_column, declared_attr
 
 
 class TimestampMixin:
     """
-    Mixin that adds created_at and updated_at timestamp columns.
+    Mixin that adds created_at and optionally updated_at timestamp columns.
 
     created_at: Automatically set when object is created
-    updated_at: Automatically updated when object is modified
+    updated_at: Optionally updated when object is modified (only if include_updated_at = True)
 
-    Child classes can disable updated_at tracking by setting include_updated_at = False
+    Child classes can enable updated_at tracking by setting include_updated_at = True
     """
+
+    include_updated_at = False
 
     created_at: Mapped[datetime] = mapped_column(
-        default=datetime.utcnow,
-        server_default=func.now(),
-        nullable=False,
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=datetime.now,
         server_default=func.now(),
         nullable=False,
     )
 
-    # Flag to control whether updated_at should be included
-    include_updated_at: ClassVar[bool] = True
-
-
-@event.listens_for(TimestampMixin, "before_update", propagate=True)
-def timestamp_before_update(mapper, connection, target):
-    """
-    Event listener to ensure updated_at is set properly during updates.
-    This ensures that the update timestamp is set even during bulk operations
-    or when using mechanisms that bypass SQLAlchemy's standard attribute tracking.
-
-    Only updates if the include_updated_at class attribute is True.
-    """
-    if getattr(target, "include_updated_at", True):
-        target.updated_at = datetime.utcnow()
+    @declared_attr
+    def updated_at(cls) -> Mapped[DateTime | None]:
+        # To include, specify include_updated_at = True in the child class
+        if hasattr(cls, "include_updated_at") and cls.include_updated_at:
+            return mapped_column(
+                DateTime,
+                default=func.now(),
+                server_default=func.now(),
+                onupdate=func.now(),
+                nullable=False,
+            )
+        return None

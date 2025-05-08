@@ -1,4 +1,4 @@
-"""comment
+"""add comment table
 
 Revision ID: 902ffdf2b5da
 Revises: 070ce4d0d6c3
@@ -14,7 +14,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "902ffdf2b5da"
-down_revision: Union[str, None] = "070ce4d0d6c3"
+down_revision: Union[str, None] = "93e3301caf2a"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -30,9 +30,6 @@ def upgrade() -> None:
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column(
             "created_at", sa.DateTime(), server_default=sa.text("now()"), nullable=False
-        ),
-        sa.Column(
-            "updated_at", sa.DateTime(), server_default=sa.text("now()"), nullable=False
         ),
         sa.ForeignKeyConstraint(
             ["article_id"], ["article.id"], name=op.f("fk_comment_article_id_article")
