@@ -3,8 +3,7 @@ from typing import Type
 from fastapi import UploadFile, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from io import BytesIO
-from PIL import Image
-import imghdr
+from PIL import Image, UnidentifiedImageError
 
 from core.models import User
 
@@ -52,29 +51,31 @@ async def process_avatar(
     try:
         image_data = await avatar.read()
 
-        # Verify that the file is actually an image
-        image_format = imghdr.what(None, image_data)
-        if not image_format:
+        # Verify that the file is actually an image using Pillow
+        try:
+            img = Image.open(BytesIO(image_data))
+            img.verify()  # Verify that it is, in fact, an image
+            img = Image.open(BytesIO(image_data))  # Reopen as verify closes the image
+
+            # Check image dimensions
+            width, height = img.size
+            max_width, max_height = max_dimensions
+
+            if width > max_width or height > max_height:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "loc": "avatar",
+                        "msg": f"Image dimensions exceed maximum allowed {max_width}x{max_height}",
+                    },
+                )
+
+            return image_data
+        except UnidentifiedImageError:
             raise HTTPException(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 detail={"loc": "avatar", "msg": "Uploaded file is not a valid image"},
             )
-
-        # Check image dimensions
-        img = Image.open(BytesIO(image_data))
-        width, height = img.size
-        max_width, max_height = max_dimensions
-
-        if width > max_width or height > max_height:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "loc": "avatar",
-                    "msg": f"Image dimensions exceed maximum allowed {max_width}x{max_height}",
-                },
-            )
-
-        return image_data
 
     except HTTPException:
         raise
