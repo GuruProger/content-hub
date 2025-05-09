@@ -4,6 +4,7 @@ __all__ = (
     "User",
     "Article",
     "LikeArticle",
+    "LikeComment",
     "Tag",
     "ArticleTag",
     "Comment",
@@ -15,5 +16,6 @@ from .base import Base
 from .user import User
 from .article import Article
 from .like_article import LikeArticle
+from .like_comment import LikeComment
 from .tag import Tag, ArticleTag
 from .comment import Comment

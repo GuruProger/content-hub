@@ -1,7 +1,7 @@
 """add comment table
 
 Revision ID: 902ffdf2b5da
-Revises: 070ce4d0d6c3
+Revises: 93e3301caf2a
 Create Date: 2025-05-02 13:12:06.894759
 
 """
