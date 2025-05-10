@@ -1,11 +1,9 @@
-import Material from "@primeuix/themes/material"
-
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2024-11-01",
   devtools: { enabled: true },
 
-  modules: ["@primevue/nuxt-module", "@nuxtjs/google-fonts"],
+  modules: ["reka-ui/nuxt", "@nuxtjs/google-fonts"],
 
   googleFonts: {
     families: {
@@ -15,23 +13,6 @@ export default defineNuxtConfig({
       }
     },
     download: false
-  },
-
-  primevue: {
-    usePrimeVue: false,
-    autoImport: false,
-    components: {
-      prefix: "Prime",
-      include: "*",
-      exclude: ["Form", "FormField", "Editor", "Chart"]
-    },
-    options: {
-      ripple: true,
-      inputVariant: "filled",
-      theme: {
-        preset: Material
-      }
-    }
   },
 
   components: {
@@ -46,7 +27,18 @@ export default defineNuxtConfig({
     port: 3000
   },
 
+  vue: {
+    propsDestructure: true
+  },
+
+  pages: {
+    enabled: true
+  },
+
   vite: {
+    define: {
+      "process.env.USER_BASE_URL": JSON.stringify(process.env.USER_BASE_URL)
+    },
     server: {
       watch: {
         usePolling: true
