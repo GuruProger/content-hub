@@ -1,7 +1,7 @@
 <script setup lang="ts"></script>
 
 <template>
-  <NuxtPage />
+  <div>Auth</div>
 </template>
 
-<style src="./assets/global.css"></style>
+<style lang="scss" scoped></style>
