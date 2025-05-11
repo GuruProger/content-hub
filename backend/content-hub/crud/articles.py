@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Sequence
 
 from fastapi import HTTPException, status
@@ -220,45 +221,78 @@ async def get_suggested_articles(
     session: AsyncSession,
     count: int = 5,
     random_fallback: bool = True,
+    tags: list[str] = None,
+    start_date: datetime = None,
+    end_date: datetime = None,
 ) -> Sequence[Article]:
     """
-    Get suggested articles (currently random, to be replaced with recommendation system later).
+    Get suggested articles with optional filtering by tags and date range.
     Serves as placeholder for more sophisticated recommendation logic.
 
     :param session: AsyncSession for database interaction
     :param count: Number of articles to return (1-20)
     :param random_fallback: Use random selection if no recommendations available
+    :param tags: Optional list of tag names to filter articles
+    :param start_date: Optional start date for filtering articles
+    :param end_date: Optional end date for filtering articles
     :return: List of suggested articles with loaded tags
     """
     # Validate count parameter
     if not 1 <= count <= 20:
         raise ValueError("count must be between 1 and 20")
 
-    # Currently implements random fallback only
-    if random_fallback:
-        stmt = (
-            select(Article)
-            .options(
-                # Eager load tags
-                selectinload(Article.article_tags).selectinload(ArticleTag.tag),
-                # Optimize for listing
-                load_only(
-                    Article.id,
-                    Article.title,
-                    Article.rating,
-                    Article.user_id,
-                    Article.created_at,
-                    Article.updated_at,
-                    Article.is_published,
-                ),
+    # Base query
+    query = select(Article).options(
+        # Eager load tags
+        selectinload(Article.article_tags).selectinload(ArticleTag.tag),
+        # Optimize for listing
+        load_only(
+            Article.id,
+            Article.title,
+            Article.rating,
+            Article.user_id,
+            Article.created_at,
+            Article.updated_at,
+            Article.is_published,
+        ),
+    )
+
+    # Add date range filter if provided
+    if start_date:
+        query = query.where(Article.created_at >= start_date)
+    if end_date:
+        query = query.where(Article.created_at <= end_date)
+
+    # Add tag filter if provided
+    if tags and len(tags) > 0:
+        # Use subquery to filter articles that have all requested tags
+        from sqlalchemy import and_
+        from core.models import Tag
+
+        # For each tag, create a condition
+        tag_conditions = []
+        for tag_name in tags:
+            # Create a subquery for each tag to match
+            subquery = (
+                select(ArticleTag.article_id)
+                .join(Tag, ArticleTag.tag_id == Tag.id)
+                .where(Tag.name == tag_name)
+                .scalar_subquery()
             )
-            .order_by(func.random())  # Random ordering
-            .limit(count)
-        )
+            tag_conditions.append(Article.id.in_(subquery))
 
-        result = await session.execute(stmt)
-        articles = result.scalars().all()
-        return articles
+        # Add all tag conditions to the main query
+        if tag_conditions:
+            query = query.where(and_(*tag_conditions))
 
-    # Placeholder for future recommendation logic
-    return []
+    # Random ordering if random_fallback is True
+    if random_fallback:
+        query = query.order_by(func.random())
+
+    # Apply limit
+    query = query.limit(count)
+
+    # Execute query
+    result = await session.execute(query)
+    articles = result.scalars().all()
+    return articles

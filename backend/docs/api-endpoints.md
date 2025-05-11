@@ -579,24 +579,31 @@ DELETE /api/v1/articles/10
 
 **GET** `/suggested/`
 
-Retrieve a list of suggested articles.
+Retrieve a list of suggested articles with optional filtering by tags and date range.
 
 #### Query Parameters:
 
-| Parameter | Type  | Required | Default | Description                            |  
-|-----------|-------|----------|---------|----------------------------------------|  
-| `count`   | `int` | no       | 5       | Number of articles to return (1-20)    |  
+| Parameter    | Type       | Required | Default | Description                                |  
+|--------------|------------|----------|---------|--------------------------------------------|  
+| `count`      | `int`      | no       | 5       | Number of articles to return (1-20)        |  
+| `tags`       | `string[]` | no       | None    | Filter articles by tag names               |  
+| `start_date` | `string`   | no       | None    | Filter articles created after this date (format: yyyy-mm-dd) |  
+| `end_date`   | `string`   | no       | None    | Filter articles created before this date (format: yyyy-mm-dd) |  
 
-#### Example Request:
+#### Example Requests:
 
 ```http  
 GET /api/v1/articles/suggested/?count=3  
 ```  
 
+```http
+GET /api/v1/articles/suggested/?tags=python&tags=tutorial&start_date=2025-01-01&end_date=2025-03-01
+```
+
 #### Responses:
 
 - **200 OK** — list of suggested articles returned.
-- **422 Unprocessable Entity** — invalid query parameters.
+- **422 Unprocessable Entity** — invalid query parameters or date format.
 - **500 Internal Server Error** — server error.
 
 #### Example Successful Response (200):
@@ -615,18 +622,7 @@ GET /api/v1/articles/suggested/?count=3
       {
         "id": 1,
         "name": "programming"
-      }
-    ]
-  },
-  {
-    "id": 15,
-    "title": "Popular Article",
-    "user_id": 2,
-    "created_at": "2025-03-21T10:30:00.000001",
-    "updated_at": "2025-03-21T10:30:00.000001",
-    "rating": 0,
-    "is_published": true,
-    "tags": [
+      },
       {
         "id": 2,
         "name": "python"
@@ -634,19 +630,32 @@ GET /api/v1/articles/suggested/?count=3
     ]
   },
   {
-    "id": 18,
-    "title": "Another Suggested Article",
-    "user_id": 3,
-    "created_at": "2025-03-20T15:30:00.000001",
-    "updated_at": "2025-03-20T15:30:00.000001",
+    "id": 15,
+    "title": "Python Tutorial",
+    "user_id": 2,
+    "created_at": "2025-02-21T10:30:00.000001",
+    "updated_at": "2025-02-21T10:30:00.000001",
     "rating": 0,
     "is_published": true,
     "tags": [
       {
-        "id": 3,
-        "name": "fastapi"
+        "id": 2,
+        "name": "python"
+      },
+      {
+        "id": 4,
+        "name": "tutorial"
       }
     ]
   }
 ]  
 ```
+
+#### Error Response (422) - Invalid Date Format:
+
+```json
+{
+  "detail": "Invalid start_date format. Use yyyy-mm-dd (e.g., 2023-01-01)"
+}
+```
+`

@@ -1,4 +1,5 @@
 from uuid import uuid4
+from datetime import datetime, timedelta
 
 import pytest
 import pytest_asyncio
@@ -323,3 +324,74 @@ class TestArticleAPI:
 
         assert response.status_code == 422
         assert "detail" in response.json()
+
+    @pytest.mark.asyncio
+    async def test_suggested_articles_with_filters(
+        self, async_client, test_user_id, article_data
+    ):
+        """
+        Test retrieving suggested articles with tag and date filters.
+        """
+        # Create articles with different tags and dates
+        for i in range(3):
+            data = article_data.copy()
+            data["title"] = f"Programming Article {i}"
+            data["tags"] = (
+                ["programming", "python"]
+                if i % 2 == 0
+                else ["programming", "javascript"]
+            )
+            await self._create_article(async_client, test_user_id, data)
+
+        # Get today's date in yyyy-mm-dd format
+        today = datetime.now().strftime("%Y-%m-%d")
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        # Test with tag filter
+        response = await async_client.get(f"{BASE_URL}suggested/?tags=python")
+        assert response.status_code == 200
+        python_articles = response.json()
+
+        # All returned articles should have python tag
+        for article in python_articles:
+            tag_names = [tag["name"] for tag in article["tags"]]
+            assert "python" in tag_names
+
+        # Test with date filter
+        response = await async_client.get(
+            f"{BASE_URL}suggested/?start_date={yesterday}&end_date={today}"
+        )
+        assert response.status_code == 200
+        date_filtered_articles = response.json()
+
+        # Should return articles created between yesterday and today
+        assert len(date_filtered_articles) > 0
+
+        # Test with both tag and date filters
+        response = await async_client.get(
+            f"{BASE_URL}suggested/?tags=programming&start_date={yesterday}&end_date={today}"
+        )
+        assert response.status_code == 200
+        filtered_articles = response.json()
+
+        # All returned articles should have programming tag and be created between dates
+        for article in filtered_articles:
+            tag_names = [tag["name"] for tag in article["tags"]]
+            assert "programming" in tag_names
+
+    @pytest.mark.asyncio
+    async def test_suggested_articles_invalid_date_format(self, async_client):
+        """
+        Test handling of invalid date formats in suggested articles endpoint.
+        """
+        # Test invalid date format
+        response = await async_client.get(f"{BASE_URL}suggested/?start_date=01.01.2023")
+        assert response.status_code == 422  # Unprocessable Entity
+
+        response = await async_client.get(f"{BASE_URL}suggested/?end_date=01/01/2023")
+        assert response.status_code == 422  # Unprocessable Entity
+
+        # Test valid format
+        today = datetime.now().strftime("%Y-%m-%d")
+        response = await async_client.get(f"{BASE_URL}suggested/?start_date={today}")
+        assert response.status_code == 200  # Should work with valid format
