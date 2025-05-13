@@ -7,6 +7,10 @@ class UserCreateInput(BaseModel):
     password: str
     email: EmailStr
 
+class UserLoginInput(BaseModel):
+    model_config = ConfigDict(strict=True)
+    username: str
+    password: str
 
 class Token(BaseModel):
     access_token: str
