@@ -8,6 +8,7 @@ from starlette.responses import Response
 from core.models import User, db_helper
 from core.schemas.user import UserCreateSchema, UserReadSchema, UserUpdateSchema
 from crud import users as users_crud
+from api.auth.auth_config import get_current_auth_user
 
 router = APIRouter(tags=["Users"])
 
@@ -51,7 +52,19 @@ async def update_user_endpoint(
     bio: str | None = Form(None, max_length=1000),
     password: str | None = Form(None, min_length=8, max_length=30),
     avatar: UploadFile | None = None,
+    current_user: User = Depends(get_current_auth_user)
 ) -> Type[User]:
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No access."
+        )
+    user = await users_crud.get_user(session=session, user_id=user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No access for editing"
+        )
     return await users_crud.update_user(
         session=session,
         user_id=user_id,
@@ -69,7 +82,19 @@ async def update_user_endpoint(
 async def delete_user_endpoint(
     user_id: int,
     session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
+    current_user: User = Depends(get_current_auth_user)
 ) -> None:
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No access."
+        )
+    user = await users_crud.get_user(session=session, user_id=user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No access for deleting"
+        )
     await users_crud.delete_user(
         session=session,
         user_id=user_id,

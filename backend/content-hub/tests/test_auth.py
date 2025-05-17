@@ -36,10 +36,9 @@ async def setup_test_user(get_async_session: AsyncSession) -> AsyncGenerator[Use
 async def test_login_user(async_client, setup_test_user: User):
     response = await async_client.post(
         "/jwt/login/",
-        json={
+        data={
             "username": setup_test_user.username,
             "password": "test_password",
-            "email": setup_test_user.email,
         },
     )
     assert response.status_code == 200
@@ -52,10 +51,9 @@ async def test_login_user(async_client, setup_test_user: User):
 async def test_users_me(async_client, setup_test_user: User):
     login_response = await async_client.post(
         "/jwt/login/",
-        json={
+        data={
             "username": setup_test_user.username,
             "password": "test_password",
-            "email": setup_test_user.email,
         },
     )
     assert login_response.status_code == 200

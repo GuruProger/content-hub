@@ -1,13 +1,13 @@
 from jwt.exceptions import InvalidTokenError
 from fastapi import Depends, HTTPException, status, APIRouter
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm, HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import auth_utils as auth_utils
 from core.models.user import User
-from api.auth.schemas import UserCreateInput, Token
+from api.auth.schemas import UserCreateInput, Token, UserLoginInput
 from core.models.db_helper import db_helper
 
 session_getter = db_helper.session_getter
@@ -17,11 +17,13 @@ oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/jwt/login/",
 )
 
+security = HTTPBearer(auto_error=True)
+
 router = APIRouter(prefix="/jwt", tags=["JWT"])
 
 
 async def validate_auth_user(
-    user_login: UserCreateInput,
+    user_login: UserLoginInput,
     session: AsyncSession = Depends(session_getter),
 ) -> User:
     result = await session.execute(
@@ -41,12 +43,11 @@ async def validate_auth_user(
 
 
 async def get_token_payload(
-    token: str = Depends(oauth2_scheme),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> dict:
+    token = credentials.credentials
     try:
-        payload = auth_utils.decode_jwt(
-            token=token,
-        )
+        payload = auth_utils.decode_jwt(token=token)
     except InvalidTokenError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -79,8 +80,14 @@ async def get_current_auth_user(
 
 @router.post("/login/", response_model=Token)
 async def auth_user_jwt(
-    user: User = Depends(validate_auth_user),
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: AsyncSession = Depends(session_getter)
 ) -> Token:
+    user_login = UserLoginInput(
+        username=form_data.username,
+        password=form_data.password,
+    )
+    user = await validate_auth_user(user_login, session)
     jwt_payload = {
         "sub": user.username,
         "username": user.username,
