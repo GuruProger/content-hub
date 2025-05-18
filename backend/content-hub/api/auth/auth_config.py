@@ -21,6 +21,12 @@ security = HTTPBearer(auto_error=True)
 
 router = APIRouter(prefix="/jwt", tags=["JWT"])
 
+dummy_user = User(
+    id = 456,
+    username="duumy",
+    email = "dummy@gmail.com",
+)
+
 
 async def validate_auth_user(
     user_login: UserLoginInput,

@@ -102,6 +102,7 @@ class Settings(BaseSettings):
     db: DatabaseConfig = DatabaseConfig()  # Database configuration
     auth_jwt: AuthJWT = AuthJWT()  # JWT authentication configuration
     article: ArticleConfig = ArticleConfig()  # Article-related configuration
+    disable_auth: bool = True
 
 
 settings = Settings()
