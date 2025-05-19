@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.models import db_helper
+from core.models import db_helper, User
 from core.schemas.like_comment import LikeCommentOut, LikeCommentBase, LikeCommentCreate
 from crud.like_comment import LikeCommentManager
+from api.auth.auth_config import get_current_auth_user
+
 
 router = APIRouter(tags=["LikeComments"])
+
 
 @router.get("/{comment_id:int}/{user_id:int}", response_model=LikeCommentOut)
 async def get_like_endpoint(
@@ -26,8 +29,14 @@ async def get_like_endpoint(
 @router.post("/", response_model=LikeCommentBase, status_code=status.HTTP_201_CREATED)
 async def create_like_endpoint(
     like_in: LikeCommentCreate,
-    db: AsyncSession = Depends(db_helper.session_getter)
+    db: AsyncSession = Depends(db_helper.session_getter),
+    current_user: User = Depends(get_current_auth_user)
 ):
+    if like_in.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No access."
+        )
     manager = LikeCommentManager(db)
     existing_like = await manager.get_like(like_in.comment_id, like_in.user_id)
     if existing_like:
@@ -43,7 +52,8 @@ async def create_like_endpoint(
 async def delete_like_endpoint(
     comment_id: int,
     user_id: int,
-    db: AsyncSession = Depends(db_helper.session_getter)
+    db: AsyncSession = Depends(db_helper.session_getter),
+    current_user: User = Depends(get_current_auth_user)
 ):
     manager = LikeCommentManager(db)
     existing_like = await manager.get_like(comment_id, user_id)
@@ -51,6 +61,11 @@ async def delete_like_endpoint(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Like not found"
+        )
+    if user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No access."
         )
     await manager.delete_like(comment_id, user_id)
     return None
