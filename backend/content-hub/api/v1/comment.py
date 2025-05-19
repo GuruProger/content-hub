@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from core.models import db_helper
+from core.models import db_helper, User
 from core.schemas.comment import CommentCreate, CommentOut, CommentUpdate
 from crud.comment import CommentManager
+from api.auth.auth_config import get_current_auth_user
 
 router = APIRouter(tags=["Comments"])
 
@@ -24,8 +25,14 @@ async def get_comment_endpoint(
 @router.post("/", response_model=CommentOut, status_code=status.HTTP_201_CREATED)
 async def create_comment_endpoint(
     comment_in: CommentCreate,
-    db: AsyncSession = Depends(db_helper.session_getter)
+    db: AsyncSession = Depends(db_helper.session_getter),
+    current_user: User = Depends(get_current_auth_user)
 ):
+    if current_user.id != comment_in.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No access."
+        )
     manager = CommentManager(db)
     comment = await manager.create_comment(
         content=comment_in.content,
@@ -39,10 +46,16 @@ async def create_comment_endpoint(
 async def update_comment_endpoint(
     comment_id: int,
     comment_update: CommentUpdate,
-    db: AsyncSession = Depends(db_helper.session_getter)
+    db: AsyncSession = Depends(db_helper.session_getter),
+    current_user: User = Depends(get_current_auth_user)
 ):
     manager = CommentManager(db)
     existing_comment = await manager.get_comment(comment_id)
+    if existing_comment.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No access."
+        )
     if not existing_comment:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -55,10 +68,16 @@ async def update_comment_endpoint(
 @router.delete("/{comment_id:int}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_comment_endpoint(
     comment_id: int,
-    db: AsyncSession = Depends(db_helper.session_getter)
+    db: AsyncSession = Depends(db_helper.session_getter),
+    current_user: User = Depends(get_current_auth_user)
 ):
     manager = CommentManager(db)
     existing_comment = await manager.get_comment(comment_id)
+    if existing_comment.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No access."
+        )
     if not existing_comment:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
