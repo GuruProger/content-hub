@@ -17,7 +17,6 @@ async def lifespan(lifespan_app: FastAPI):
     # Code to run after the application has finished
     await db_helper.dispose()  # Closing all connections
 
-print("DISABLE_AUTH:", settings.disable_auth)
 app = FastAPI(lifespan=lifespan)
 if settings.disable_auth:
     async def override_security():
