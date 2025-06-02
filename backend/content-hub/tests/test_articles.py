@@ -6,21 +6,42 @@ import pytest_asyncio
 BASE_URL = "/api/v1/articles/"  # Base URL for article API endpoints
 
 
+async def _login_user(async_client, username: str, password: str) -> str:
+    """Authenticate user and return access token."""
+    response = await async_client.post(
+        "/jwt/login/", data={"username": username, "password": password}
+    )
+    assert response.status_code == 200, f"Login failed: {response.text}"
+    return response.json()["access_token"]
+
+
 @pytest_asyncio.fixture(scope="function")
-async def test_user_id(async_client):
+async def test_user_id(async_client, test_user_data):
     """Create a test user and return the user ID."""
-    user_data = {
+    response = await async_client.post(
+        "/api/v1/users/",
+        data=test_user_data,
+    )
+    assert response.status_code == 201
+    return response.json()["id"]
+
+
+@pytest_asyncio.fixture(scope="function")
+async def test_user_data():
+    """Generate user data for testing."""
+    return {
         "username": f"test_user_{uuid4().hex[:8]}",
         "email": f"test_{uuid4().hex[:8]}@example.com",
         "password": "test_password123",
     }
 
-    response = await async_client.post(
-        "/api/v1/users/",
-        data=user_data,
+
+@pytest_asyncio.fixture(scope="function")
+async def auth_token(async_client, test_user_data):
+    """Get authentication token for test user."""
+    return await _login_user(
+        async_client, test_user_data["username"], test_user_data["password"]
     )
-    assert response.status_code == 201
-    return response.json()["id"]
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -46,20 +67,25 @@ class TestArticleAPI:
     """
 
     @staticmethod
-    async def _create_article(async_client, user_id, article_data):
+    async def _create_article(async_client, user_id, article_data, auth_token):
         """Helper method to create an article and return its ID."""
         create_data = article_data.copy()
         create_data["user_id"] = user_id
 
+        headers = {"Authorization": f"Bearer {auth_token}"}
+
         response = await async_client.post(
             BASE_URL,
             json=create_data,
+            headers=headers,
         )
         assert response.status_code == 201
         return response.json()["id"]
 
     @pytest.mark.asyncio
-    async def test_create_article(self, async_client, test_user_id, article_data):
+    async def test_create_article(
+        self, async_client, test_user_id, article_data, auth_token
+    ):
         """
         Test creating an article.
         Verifies that the article is created successfully with all fields.
@@ -68,10 +94,13 @@ class TestArticleAPI:
         create_data = article_data.copy()
         create_data["user_id"] = test_user_id
 
+        headers = {"Authorization": f"Bearer {auth_token}"}
+
         # Send POST request to create article
         response = await async_client.post(
             BASE_URL,
             json=create_data,
+            headers=headers,
         )
 
         # Verify successful creation
@@ -91,17 +120,19 @@ class TestArticleAPI:
             assert tag_name in tag_names
 
     @pytest.mark.asyncio
-    async def test_get_article(self, async_client, test_user_id, article_data):
+    async def test_get_article(
+        self, async_client, test_user_id, article_data, auth_token
+    ):
         """
         Test retrieving an article by ID.
         Creates an article and then verifies it can be retrieved with correct data.
         """
         # First create an article
         article_id = await self._create_article(
-            async_client, test_user_id, article_data
+            async_client, test_user_id, article_data, auth_token
         )
 
-        # Then retrieve it
+        # Then retrieve it (GET requests may not require authentication)
         response = await async_client.get(f"{BASE_URL}{article_id}")
 
         # Verify successful retrieval
@@ -134,14 +165,16 @@ class TestArticleAPI:
         assert "detail" in response.json()
 
     @pytest.mark.asyncio
-    async def test_update_article(self, async_client, test_user_id, article_data):
+    async def test_update_article(
+        self, async_client, test_user_id, article_data, auth_token
+    ):
         """
         Test updating an article.
         Creates an article, updates it, and verifies the changes.
         """
         # First create an article
         article_id = await self._create_article(
-            async_client, test_user_id, article_data
+            async_client, test_user_id, article_data, auth_token
         )
 
         # Prepare update data
@@ -152,10 +185,13 @@ class TestArticleAPI:
             "tags": ["updated", "tags"],
         }
 
+        headers = {"Authorization": f"Bearer {auth_token}"}
+
         # Send update request
         response = await async_client.patch(
             f"{BASE_URL}{article_id}",
             json=update_data,
+            headers=headers,
         )
 
         # Verify successful update
@@ -177,7 +213,7 @@ class TestArticleAPI:
                 assert tag not in tag_names
 
     @pytest.mark.asyncio
-    async def test_update_nonexistent_article(self, async_client):
+    async def test_update_nonexistent_article(self, async_client, auth_token):
         """
         Test updating a non-existent article.
         Verifies the API returns a 404 error.
@@ -185,27 +221,34 @@ class TestArticleAPI:
         nonexistent_id = 99999
         update_data = {"title": "Update Non-existent Article"}
 
+        headers = {"Authorization": f"Bearer {auth_token}"}
+
         response = await async_client.patch(
             f"{BASE_URL}{nonexistent_id}",
             json=update_data,
+            headers=headers,
         )
 
         assert response.status_code == 404
         assert "detail" in response.json()
 
     @pytest.mark.asyncio
-    async def test_delete_article(self, async_client, test_user_id, article_data):
+    async def test_delete_article(
+        self, async_client, test_user_id, article_data, auth_token
+    ):
         """
         Test deleting an article.
         Creates an article, deletes it, and verifies it cannot be retrieved afterward.
         """
         # First create an article
         article_id = await self._create_article(
-            async_client, test_user_id, article_data
+            async_client, test_user_id, article_data, auth_token
         )
 
+        headers = {"Authorization": f"Bearer {auth_token}"}
+
         # Delete the article
-        response = await async_client.delete(f"{BASE_URL}{article_id}")
+        response = await async_client.delete(f"{BASE_URL}{article_id}", headers=headers)
         assert response.status_code == 204
 
         # Try to get the deleted article
@@ -213,19 +256,25 @@ class TestArticleAPI:
         assert get_response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_delete_nonexistent_article(self, async_client):
+    async def test_delete_nonexistent_article(self, async_client, auth_token):
         """
         Test deleting a non-existent article.
         Verifies the API returns a 404 error.
         """
         nonexistent_id = 99999
-        response = await async_client.delete(f"{BASE_URL}{nonexistent_id}")
+        headers = {"Authorization": f"Bearer {auth_token}"}
+
+        response = await async_client.delete(
+            f"{BASE_URL}{nonexistent_id}", headers=headers
+        )
 
         assert response.status_code == 404
         assert "detail" in response.json()
 
     @pytest.mark.asyncio
-    async def test_get_user_articles(self, async_client, test_user_id, article_data):
+    async def test_get_user_articles(
+        self, async_client, test_user_id, article_data, auth_token
+    ):
         """
         Test retrieving all articles for a user.
         Creates multiple articles for a user and verifies they are all retrieved.
@@ -239,7 +288,9 @@ class TestArticleAPI:
             data["title"] = f"User Article {i}"
             data["tags"] = [f"tag{i}", "common"]
 
-            article_id = await self._create_article(async_client, test_user_id, data)
+            article_id = await self._create_article(
+                async_client, test_user_id, data, auth_token
+            )
             article_ids.append(article_id)
 
         # Get all articles for the user
@@ -259,7 +310,7 @@ class TestArticleAPI:
 
     @pytest.mark.asyncio
     async def test_get_suggested_articles(
-        self, async_client, test_user_id, article_data
+        self, async_client, test_user_id, article_data, auth_token
     ):
         """
         Test retrieving suggested articles.
@@ -270,7 +321,7 @@ class TestArticleAPI:
         for i in range(article_count):
             data = article_data.copy()
             data["title"] = f"Suggested Article {i}"
-            await self._create_article(async_client, test_user_id, data)
+            await self._create_article(async_client, test_user_id, data, auth_token)
 
         # Get suggested articles
         response = await async_client.get(f"{BASE_URL}suggested/?count=3")
@@ -290,11 +341,13 @@ class TestArticleAPI:
             assert "tags" in article
 
     @pytest.mark.asyncio
-    async def test_invalid_article_data(self, async_client, test_user_id):
+    async def test_invalid_article_data(self, async_client, test_user_id, auth_token):
         """
         Test creating an article with invalid data.
         Verifies that API validates input correctly.
         """
+        headers = {"Authorization": f"Bearer {auth_token}"}
+
         # Missing required fields
         invalid_data = {
             "user_id": test_user_id,
@@ -304,6 +357,7 @@ class TestArticleAPI:
         response = await async_client.post(
             BASE_URL,
             json=invalid_data,
+            headers=headers,
         )
 
         assert response.status_code == 422
@@ -319,6 +373,7 @@ class TestArticleAPI:
         response = await async_client.post(
             BASE_URL,
             json=invalid_data,
+            headers=headers,
         )
 
         assert response.status_code == 422
