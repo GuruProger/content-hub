@@ -1,3 +1,132 @@
+## **JWT Authentication API**
+
+**Base URL:** `http://127.0.0.1:8000/jwt`
+
+### **Login**
+
+**POST** `/login/`
+
+Authenticates a user and returns a JWT token.
+
+#### Request Content Type:
+
+`application/x-www-form-urlencoded`
+
+#### Form Parameters:
+
+| Parameter  | Type   | Required | Description     |  
+|------------|--------|----------|-----------------|  
+| `username` | string | yes      | User's username |  
+| `password` | string | yes      | User's password |  
+
+#### Example Request:
+
+```bash  
+curl -X 'POST' \  
+  'http://0.0.0.0:8000/jwt/login/' \  
+  -H 'accept: application/json' \  
+  -H 'Content-Type: application/x-www-form-urlencoded' \  
+  -d 'username=johndoe&password=securepassword123'  
+```  
+
+#### Responses:
+
+| Code | Description                                 |  
+|------|---------------------------------------------|  
+| 200  | ✅ Authentication successful, token received |  
+| 401  | ❌ Invalid credentials                       |  
+
+#### Example Success Response:
+
+```json  
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer"
+}  
+```  
+
+### **Register**
+
+**POST** `/register/`
+
+Registers a new user and returns a JWT token.
+
+#### Request Content Type:
+
+`application/json`
+
+#### Request Body Parameters:
+
+| Parameter  | Type   | Required | Description     |  
+|------------|--------|----------|-----------------|  
+| `username` | string | yes      | User's username |  
+| `email`    | string | yes      | User's email    |  
+| `password` | string | yes      | User's password |  
+
+#### Example Request:
+
+```bash  
+curl -X 'POST' \  
+  'http://0.0.0.0:8000/jwt/register/' \  
+  -H 'accept: application/json' \  
+  -H 'Content-Type: application/json' \  
+  -d '{"username": "newuser", "email": "new@example.com", "password": "securepassword123"}'  
+```  
+
+#### Responses:
+
+| Code | Description                                    |  
+|------|------------------------------------------------|  
+| 201  | ✅ User registered successfully, token received |  
+| 400  | ❌ Username or email already exists             |  
+
+#### Example Success Response:
+
+```json  
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer"
+}  
+```  
+
+### **Check Authenticated User**
+
+**GET** `/users/me/`
+
+Retrieves information about the currently authenticated user.
+
+#### Headers:
+
+| Header          | Value            | Required | Description                  |  
+|-----------------|------------------|----------|------------------------------|  
+| `Authorization` | `Bearer {token}` | yes      | JWT token for authentication |  
+
+#### Example Request:
+
+```bash  
+curl -X 'GET' \  
+  'http://0.0.0.0:8000/jwt/users/me/' \  
+  -H 'accept: application/json' \  
+  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'  
+```  
+
+#### Responses:
+
+| Code | Description                               |  
+|------|-------------------------------------------|  
+| 200  | ✅ Successfully retrieved user information |  
+| 401  | ❌ Invalid or missing token                |  
+
+#### Example Success Response:
+
+```json  
+{
+  "username": "johndoe",
+  "email": "john@example.com",
+  "logged_in_at": "2023-05-01T15:30:45.123456Z"
+}  
+```  
+
 ## **Users API**
 
 **Base URL:** `http://127.0.0.1:8000/api/v1/users`
