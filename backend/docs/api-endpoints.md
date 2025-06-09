@@ -55,7 +55,7 @@ Registers a new user and returns a JWT token.
 
 `application/json`
 
-#### Request Body Parameters:
+#### Request Body Parameters:   
 
 | Parameter  | Type   | Required | Description     |  
 |------------|--------|----------|-----------------|  
@@ -127,7 +127,304 @@ curl -X 'GET' \
 }  
 ```  
 
+---
+
 ## **Users API**
+
+**Base URL:** `http://127.0.0.1:8000/api/v1/users`
+
+### **Create User**
+
+**POST** `/`
+
+Creates a new user account. Supports optional avatar upload.
+
+#### Request Content Type:
+
+`multipart/form-data`
+
+#### Form Data Parameters:
+
+| Parameter  | Type   | Required | Description                         |
+|------------|--------|----------|-------------------------------------|
+| `username` | string | yes      | Unique username (max 50 characters) |
+| `email`    | email  | yes      | Valid email address                 |
+| `bio`      | string | no       | Optional bio (max 1000 characters)  |
+| `password` | string | yes      | Password (8–30 characters)          |
+| `avatar`   | file   | no       | Optional avatar image (binary file) |
+
+#### Example Request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/users \  
+  -H 'accept: application/json' \  
+  -H 'Content-Type: multipart/form-data' \  
+  -F "username=johndoe" \  
+  -F "email=john@example.com" \  
+  -F "password=securepassword123" \  
+  -F "bio=Just a regular guy" \  
+  -F 'avatar=@avatar.jpg;type=image/jpeg'
+```
+
+#### Responses:
+
+| Code | Description                                    |
+|------|------------------------------------------------|
+| 201  | ✅ User successfully created                    |
+| 400  | ❌ Avatar validation error                      |
+| 409  | ❌ Email or username already exists             |
+| 413  | ❌ Avatar file size too large                   |
+| 415  | ❌ Avatar file is not a valid image             |
+| 422  | ❌ Validation error (invalid or missing fields) |
+| 500  | ❌ Internal server/database error               |
+
+#### Example Success Response:
+
+```json
+{
+  "username": "johndoe",
+  "email": "john@example.com",
+  "bio": "Just a regular guy",
+  "id": 1,
+  "created_at": "2025-04-16T19:05:27.993045",
+  "rating": 0,
+  "is_admin": false,
+  "avatar": true,
+  "status": "active"
+}
+```
+
+#### Error Responses:
+
+Username conflict
+
+```json
+{
+  "detail": {
+    "loc": "username",
+    "msg": "Username already exists"
+  }
+}
+```
+
+Email conflict
+
+```json
+{
+  "detail": {
+    "loc": "email",
+    "msg": "Email already exists"
+  }
+}
+```
+
+Unsupported File Type
+
+```json  
+{
+  "detail": {
+    "loc": "avatar",
+    "msg": "File must be an image"
+  }
+}  
+```  
+
+> ℹ️ `avatar` returns a boolean (`true` if uploaded, otherwise `false`).
+
+---
+
+### **Get User by ID**
+
+**GET** `/{user_id}`
+
+Fetches user data by ID. If the user has an avatar, it is returned as a base64 string.
+
+#### URL Parameters:
+
+| Parameter | Type | Required | Description           |
+|-----------|------|----------|-----------------------|
+| `user_id` | int  | yes      | ID of the target user |
+
+#### Example Request:
+
+```bash
+curl -X 'GET' \
+  'http://0.0.0.0:8000/api/v1/users/1' \
+  -H 'accept: application/json'
+```
+
+#### Responses:
+
+| Code | Description                      |
+|------|----------------------------------|
+| 200  | ✅ User found                     |
+| 404  | ❌ User not found                 |
+| 422  | ❌ Invalid `user_id` format       |
+| 500  | ❌ Internal server/database error |
+
+#### Example Response:
+
+```json
+{
+  "id": 1,
+  "username": "johndoe",
+  "email": "john@example.com",
+  "bio": "Just a regular guy",
+  "created_at": "2025-04-16T18:55:36.719610",
+  "rating": 0,
+  "is_admin": false,
+  "avatar": "/9j/4AAQSkZJRgABAQEAZ...Po//9k=",
+  "status": "active"
+}
+```
+
+> ℹ️ `avatar` will contain a base64-encoded image string if uploaded.
+
+---
+
+### **Update User**
+
+**PATCH** `/{user_id}`
+
+Updates user profile fields. All fields are optional. Avatar can also be replaced.
+
+**Authentication required**: User can only update their own profile.
+
+#### Request Content Type:
+
+`multipart/form-data`
+
+#### URL Parameters:
+
+| Parameter | Type | Required | Description           |
+|-----------|------|----------|-----------------------|
+| `user_id` | int  | yes      | ID of the target user |
+
+#### Headers:
+
+| Header          | Value            | Required | Description                  |
+|-----------------|------------------|----------|------------------------------|
+| `Authorization` | `Bearer {token}` | yes      | JWT token for authentication |
+
+#### Form Data Parameters (optional):
+
+| Parameter  | Type   | Description                        |
+|------------|--------|------------------------------------|
+| `username` | string | New username (max 50 characters)   |
+| `email`    | email  | New email address                  |
+| `bio`      | string | Updated bio (max 1000 characters)  |
+| `password` | string | New password (8–30 characters)     |
+| `avatar`   | file   | Replace avatar image (binary file) |
+
+#### Example Request:
+
+```bash
+curl -X 'PATCH' \
+  'http://0.0.0.0:8000/api/v1/users/1' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'username=johndoe_updated' \
+  -F 'email=john_updated@example.com' \
+  -F 'bio='
+```
+
+#### Responses:
+
+| Code | Description                        |
+|------|------------------------------------|
+| 200  | ✅ User successfully updated        |
+| 400  | ❌ Avatar validation error          |
+| 403  | ❌ Forbidden                        |
+| 404  | ❌ User not found                   |
+| 409  | ❌ Email or username already exists |
+| 413  | ❌ Avatar file size too large       |
+| 415  | ❌ Avatar file is not a valid image |
+| 422  | ❌ Invalid input or bad format      |
+| 500  | ❌ Database error                   |
+
+#### Example Response:
+
+```json
+{
+  "username": "johndoe_updated",
+  "email": "john_updated@example.com",
+  "bio": "",
+  "id": 1,
+  "created_at": "2025-04-16T18:55:36.719610",
+  "rating": 0,
+  "is_admin": false,
+  "avatar": true,
+  "status": "active"
+}
+```
+
+#### Example Error (403):
+
+```json
+{
+  "detail": "No access."
+}
+```
+
+---
+
+### **Delete User**
+
+**DELETE** `/{user_id}`
+
+Soft-deletes a user by marking them as deleted in the database.
+
+**Authentication required**: User can only delete свой собственный профиль.
+
+#### URL Parameters:
+
+| Parameter | Type | Required | Description           |
+|-----------|------|----------|-----------------------|
+| `user_id` | int  | yes      | ID of the target user |
+
+#### Headers:
+
+| Header          | Value            | Required | Description                  |
+|-----------------|------------------|----------|------------------------------|
+| `Authorization` | `Bearer {token}` | yes      | JWT token for authentication |
+
+#### Example Request:
+
+```bash
+curl -X 'DELETE' \
+  'http://0.0.0.0:8000/api/v1/users/1' \
+  -H 'accept: */*' \
+  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+#### Responses:
+
+| Code | Description                                    |
+|------|------------------------------------------------|
+| 204  | ✅ User successfully deleted (no response body) |
+| 403  | ❌ Forbidden (не ваш профиль)                   |
+| 404  | ❌ User not found                               |
+| 422  | ❌ Invalid `user_id` format                     |
+| 500  | ❌ Internal server error                        |
+
+#### Example Error:
+
+```json
+{
+  "detail": "No access."
+}
+```
+
+---
+
+### Additional Notes
+
+| Feature                | Description                                                                |
+|------------------------|----------------------------------------------------------------------------|
+| **Soft Delete**        | Users are marked as deleted (`status = DELETED`) instead of being removed. |
+| **Avatar in response** | In GET — base64, in the rest — boolean true/false                          |
+| **Authentication**     | Update and Delete operations require authentication                        |
 
 **Base URL:** `http://127.0.0.1:8000/api/v1/users`
 
@@ -398,8 +695,6 @@ curl -X 'DELETE' \
 ## **Articles API**
 
 **Base URL:** `http://127.0.0.1:8000/api/v1/articles`
-  
----  
 
 ### **Create Article**
 
@@ -467,9 +762,6 @@ Content-Type: application/json
 }  
 ```  
 
-  
----  
-
 ### **Get Article by ID**
 
 **GET** `/{article_id}`
@@ -530,9 +822,6 @@ GET /api/v1/articles/10
   "detail": "Article not found"
 }  
 ```  
-
-  
----  
 
 ### **Get Articles by User**
 
@@ -598,9 +887,6 @@ GET /api/v1/articles/user/1
 ]  
 ```  
 
-  
----  
-
 ### **Update Article**
 
 **PATCH** `/{article_id}`
@@ -617,11 +903,11 @@ Update an existing article.
 
 All fields are optional.
 
-| Parameter      | Type       | Required | Description                        |  
-|----------------|------------|----------|------------------------------------|  
-| `title`        | `string`   | no       | New article title (max. 255 chars) |  
-| `content`      | `string`   | no       | New content                        |  
-| `is_published` | `boolean`  | no       | Published status                   |  
+| Parameter      | Type       | Required | Description                                 |  
+|----------------|------------|----------|---------------------------------------------|  
+| `title`        | `string`   | no       | New article title (max. 255 chars)          |  
+| `content`      | `string`   | no       | New content                                 |  
+| `is_published` | `boolean`  | no       | Published status                            |  
 | `tags`         | `string[]` | no       | Array of tag names (replaces existing tags) |  
 
 #### Example Request:
@@ -669,9 +955,6 @@ Content-Type: application/json
 }  
 ```  
 
-  
----  
-
 ### **Delete Article**
 
 **DELETE** `/{article_id}`
@@ -712,9 +995,9 @@ Retrieve a list of suggested articles.
 
 #### Query Parameters:
 
-| Parameter | Type  | Required | Default | Description                            |  
-|-----------|-------|----------|---------|----------------------------------------|  
-| `count`   | `int` | no       | 5       | Number of articles to return (1-20)    |  
+| Parameter | Type  | Required | Default | Description                         |  
+|-----------|-------|----------|---------|-------------------------------------|  
+| `count`   | `int` | no       | 5       | Number of articles to return (1-20) |  
 
 #### Example Request:
 
