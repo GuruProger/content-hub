@@ -40,18 +40,6 @@ async def get_article_endpoint(
     return article
 
 
-@router.get("/user/{user_id}", response_model=Sequence[ArticlePreviewSchema])
-async def get_user_articles_endpoint(
-    user_id: int,
-    session: Annotated[AsyncSession, Depends(db_helper.session_getter)],
-) -> Sequence[Article]:
-    articles = await articles_crud.get_user_articles(
-        session=session,
-        user_id=user_id,
-    )
-    return articles
-
-
 @router.patch("/{article_id}", response_model=ArticleReadSchema)
 async def update_article_endpoint(
     article_id: int,
@@ -93,6 +81,14 @@ async def get_suggested_articles_endpoint(
         description="Filter articles created before this date (format: yyyy-mm-dd)",
         example=date.today().isoformat(),
     ),
+    user_id: Optional[int] = Query(
+        default=None,
+        description="Filter articles by user_id",
+    ),
+    include_content: bool = Query(
+        default=False,
+        description="Include article content in response",
+    ),
     session: AsyncSession = Depends(db_helper.session_getter),
 ):
     """Get suggested articles with optional filtering by tags and date range."""
@@ -122,10 +118,19 @@ async def get_suggested_articles_endpoint(
                 detail="Invalid end_date format. Use yyyy-mm-dd (e.g., 2022-02-22)",
             )
 
-    return await articles_crud.get_suggested_articles(
+    articles = await articles_crud.get_suggested_articles(
         session=session,
         count=count,
         tags=tags,
         start_date=parsed_start_date,
         end_date=parsed_end_date,
+        user_id=user_id,
+        include_content=include_content,
     )
+
+    # Гарантируем, что поле content всегда присутствует
+    if not include_content:
+        for article in articles:
+            article.content = None
+
+    return articles
