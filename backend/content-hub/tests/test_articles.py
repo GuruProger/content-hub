@@ -226,39 +226,6 @@ class TestArticleAPI:
         assert "detail" in response.json()
 
     @pytest.mark.asyncio
-    async def test_get_user_articles(self, async_client, test_user_id, article_data):
-        """
-        Test retrieving all articles for a user.
-        Creates multiple articles for a user and verifies they are all retrieved.
-        """
-        # Create several articles for the user
-        article_count = 3
-        article_ids = []
-
-        for i in range(article_count):
-            data = article_data.copy()
-            data["title"] = f"User Article {i}"
-            data["tags"] = [f"tag{i}", "common"]
-
-            article_id = await self._create_article(async_client, test_user_id, data)
-            article_ids.append(article_id)
-
-        # Get all articles for the user
-        response = await async_client.get(f"{BASE_URL}user/{test_user_id}")
-
-        # Verify successful retrieval
-        assert response.status_code == 200
-        response_data = response.json()
-
-        # Verify all created articles are returned
-        assert len(response_data) == article_count
-
-        # Verify article IDs match what we created
-        returned_ids = [article["id"] for article in response_data]
-        for article_id in article_ids:
-            assert article_id in returned_ids
-
-    @pytest.mark.asyncio
     async def test_get_suggested_articles(
         self, async_client, test_user_id, article_data
     ):
@@ -266,29 +233,90 @@ class TestArticleAPI:
         Test retrieving suggested articles.
         Creates articles and verifies the suggested endpoint returns articles.
         """
-        # Create some articles first
+        # Create test articles
         article_count = 5
+        created_contents = set()
         for i in range(article_count):
             data = article_data.copy()
             data["title"] = f"Suggested Article {i}"
+            # Store all created contents for verification
+            created_contents.add(data["content"])
             await self._create_article(async_client, test_user_id, data)
 
-        # Get suggested articles
-        response = await async_client.get(f"{BASE_URL}suggested/?count=3")
-
-        # Verify successful retrieval
+        # Get suggested articles (without content)
+        response = await async_client.get(
+            f"{BASE_URL}suggested/?count=3&user_id={test_user_id}"
+        )
         assert response.status_code == 200
         response_data = response.json()
-
-        # Should have 3 articles as requested by count parameter
         assert len(response_data) <= 3
-
-        # Verify each returned item has expected structure
         for article in response_data:
             assert "id" in article
             assert "title" in article
             assert "user_id" in article
             assert "tags" in article
+            assert "content" not in article or article["content"] is None
+
+        # Test include_content=True
+        response = await async_client.get(
+            f"{BASE_URL}suggested/?count=2&include_content=true&user_id={test_user_id}"
+        )
+        assert response.status_code == 200
+        response_data = response.json()
+        for article in response_data:
+            assert "content" in article
+            assert article["content"] is not None
+            # Verify content exists in created articles
+            assert article["content"] in created_contents
+
+    @pytest.mark.asyncio
+    async def test_suggested_articles_user_id_filter(
+        self, async_client, test_user_id, article_data
+    ):
+        """
+        Test suggested articles endpoint with user_id filter.
+        """
+        # Create articles for two different users
+        # First user
+        for i in range(2):
+            data = article_data.copy()
+            data["title"] = f"User1 Article {i}"
+            await self._create_article(async_client, test_user_id, data)
+
+        # Second user
+        user2_data = {
+            "username": f"user2_{uuid4().hex[:8]}",
+            "email": f"user2_{uuid4().hex[:8]}@example.com",
+            "password": "test_password123",
+        }
+        user2_resp = await async_client.post("/api/v1/users/", data=user2_data)
+        assert user2_resp.status_code == 201
+        user2_id = user2_resp.json()["id"]
+
+        for i in range(2):
+            data = article_data.copy()
+            data["title"] = f"User2 Article {i}"
+            await self._create_article(async_client, user2_id, data)
+
+        # Get articles only for the first user
+        response = await async_client.get(
+            f"{BASE_URL}suggested/?user_id={test_user_id}&count=10"
+        )
+        assert response.status_code == 200
+        articles = response.json()
+        assert articles  # There should be at least one result
+        for article in articles:
+            assert article["user_id"] == test_user_id
+
+        # Get articles only for the second user
+        response = await async_client.get(
+            f"{BASE_URL}suggested/?user_id={user2_id}&count=10"
+        )
+        assert response.status_code == 200
+        articles = response.json()
+        assert articles
+        for article in articles:
+            assert article["user_id"] == user2_id
 
     @pytest.mark.asyncio
     async def test_invalid_article_data(self, async_client, test_user_id):
@@ -378,6 +406,17 @@ class TestArticleAPI:
         for article in filtered_articles:
             tag_names = [tag["name"] for tag in article["tags"]]
             assert "programming" in tag_names
+
+        # Проверка include_content с фильтрами
+        response = await async_client.get(
+            f"{BASE_URL}suggested/?tags=python&include_content=true"
+        )
+        assert response.status_code == 200
+        for article in response.json():
+            assert "content" in article
+            assert article["content"] is not None
+            tag_names = [tag["name"] for tag in article["tags"]]
+            assert "python" in tag_names
 
     @pytest.mark.asyncio
     async def test_suggested_articles_invalid_date_format(self, async_client):

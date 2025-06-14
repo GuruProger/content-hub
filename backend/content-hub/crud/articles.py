@@ -179,44 +179,6 @@ async def delete_article(
 
 
 @article_error_handler
-async def get_user_articles(
-    session: AsyncSession,
-    user_id: int,
-) -> Sequence[Article]:
-    """
-    Retrieve all articles for a user (excluding content) with their tags.
-    Optimized for listing - doesn't load article content.
-
-    :param session: AsyncSession for database interaction
-    :param user_id: ID of the user whose articles to retrieve
-    :return: List of articles (without content) with loaded tags
-    """
-    # Build optimized query for listing
-    stmt = (
-        select(Article)
-        .where(Article.user_id == user_id)
-        .options(
-            # Eager load tags
-            selectinload(Article.article_tags).selectinload(ArticleTag.tag),
-            # Only select specific columns (exclude content)
-            load_only(
-                Article.id,
-                Article.title,
-                Article.rating,
-                Article.user_id,
-                Article.created_at,
-                Article.updated_at,
-                Article.is_published,
-            ),
-        )
-    )
-    result = await session.execute(stmt)
-    articles = result.scalars().all()
-
-    return articles
-
-
-@article_error_handler
 async def get_suggested_articles(
     session: AsyncSession,
     count: int = 5,
@@ -224,6 +186,8 @@ async def get_suggested_articles(
     tags: list[str] = None,
     start_date: datetime = None,
     end_date: datetime = None,
+    user_id: int = None,
+    include_content: bool = False,
 ) -> Sequence[Article]:
     """
     Get suggested articles with optional filtering by tags and date range.
@@ -235,6 +199,8 @@ async def get_suggested_articles(
     :param tags: Optional list of tag names to filter articles
     :param start_date: Optional start date for filtering articles
     :param end_date: Optional end date for filtering articles
+    :param user_id: Optional user_id to filter articles by user
+    :param include_content: If True, include article content in result
     :return: List of suggested articles with loaded tags
     """
     # Validate count parameter
@@ -242,19 +208,21 @@ async def get_suggested_articles(
         raise ValueError("count must be between 1 and 20")
 
     # Base query
+    load_fields = [
+        Article.id,
+        Article.title,
+        Article.rating,
+        Article.user_id,
+        Article.created_at,
+        Article.updated_at,
+        Article.is_published,
+    ]
+    if include_content:
+        load_fields.append(Article.content)
+
     query = select(Article).options(
-        # Eager load tags
         selectinload(Article.article_tags).selectinload(ArticleTag.tag),
-        # Optimize for listing
-        load_only(
-            Article.id,
-            Article.title,
-            Article.rating,
-            Article.user_id,
-            Article.created_at,
-            Article.updated_at,
-            Article.is_published,
-        ),
+        load_only(*load_fields),
     )
 
     # Add date range filter if provided
@@ -284,6 +252,9 @@ async def get_suggested_articles(
         # Add all tag conditions to the main query
         if tag_conditions:
             query = query.where(and_(*tag_conditions))
+
+    if user_id is not None:
+        query = query.where(Article.user_id == user_id)
 
     # Random ordering if random_fallback is True
     if random_fallback:

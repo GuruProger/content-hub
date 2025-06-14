@@ -70,3 +70,8 @@ class ArticlePreviewSchema(BaseModel, ConfigMixin):
     is_published: bool
     rating: float
     tags: List[TagReadSchema] = []
+    content: Optional[str] = None  # Просто Optional с None по умолчанию
+
+    class Config(ConfigMixin.Config):
+        # Это позволит исключать None значения из вывода
+        exclude_none = True
